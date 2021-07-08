@@ -1,0 +1,13 @@
+{
+  "imports": {
+    "/": "./",
+    "./": "./",
+    "~/": "./src/",
+    "std/": "https://deno.land/std@0.96.0/",
+    "path": "https://deno.land/std@0.96.0/path/mod.ts",
+    "log": "https://deno.land/std@0.96.0/log/mod.ts",
+    "hash": "https://deno.land/x/object_hash@2.0.3.1/mod.ts",
+    "fs": "https://deno.land/std@0.96.0/fs/mod.ts",
+    "fun/": "https://raw.githubusercontent.com/nullpub/fun/feat/sequence/"
+  }
+}
