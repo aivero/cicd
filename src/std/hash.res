@@ -1,0 +1,1 @@
+@module("hash") external hash: 'a => string = "default"

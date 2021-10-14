@@ -1,0 +1,5 @@
+lib/*
+node_modules/*
+*.lock
+lock.bundle
+.merlin
