@@ -7,7 +7,7 @@ let rec find = dir => {
   switch dir {
   | _ if File.exists(path) => Some(path)
   | "." => None
-  | _ => find(Path.dirname(path))
+  | _ => find(Path.dirname(dir))
   }
 }
 
