@@ -1,1 +1,0 @@
-{ "dirs" : [ "src" , "src/job" , "src/mode" , "src/std" ] , "pkgs" : [ [ "@ryyppy/rescript-promise" , "/var/home/noverby/Work/aivero/cicd/node_modules/@ryyppy/rescript-promise" ] ] , "generated" : [] }

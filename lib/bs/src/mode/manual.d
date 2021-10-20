@@ -1,1 +1,0 @@
-src/mode/manual.cmj : src/config.cmj src/config.cmi src/std/env.cmj src/std/env.cmi src/std/flat.cmj src/std/flat.cmi src/instance.cmj src/instance.cmi src/std/proc.cmj src/std/proc.cmi src/std/task.cmj src/std/task.cmi
