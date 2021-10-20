@@ -1,0 +1,80 @@
+rescript = 1
+g_finger := /var/home/noverby/Work/aivero/cicd/node_modules/@ryyppy/rescript-promise/lib/ocaml/install.stamp
+rule astj
+  command = /var/home/noverby/Work/aivero/cicd/node_modules/rescript/linux/bsc.exe  -bs-v 9.1.4 -open Belt -absname -bs-ast -o $out $i
+o src/config.ast : astj ../../src/config.res
+rule deps
+  command = /var/home/noverby/Work/aivero/cicd/node_modules/rescript/linux/bsb_helper.exe -hash 1d1365440a4c678dd201b914378cc1a3 $in
+  restat = 1
+o src/config.d : deps src/config.ast
+rule mij
+  command = /var/home/noverby/Work/aivero/cicd/node_modules/rescript/linux/bsc.exe -I src/std -I src/mode -I src/job -I src -I /var/home/noverby/Work/aivero/cicd/node_modules/@ryyppy/rescript-promise/lib/ocaml -open Belt  -bs-package-name rescript-deno -bs-package-output es6-global:lib/es6_global/$in_d:.js -bs-v $g_finger $i
+  dyndep = 1
+  restat = 1
+o src/config.cmj src/config.cmi ../es6_global/src/config.js : mij src/config.ast
+o src/detect.ast : astj ../../src/detect.res
+o src/detect.d : deps src/detect.ast
+o src/detect.cmj src/detect.cmi ../es6_global/src/detect.js : mij src/detect.ast
+o src/gitlab.ast : astj ../../src/gitlab.res
+o src/gitlab.d : deps src/gitlab.ast
+o src/gitlab.cmj src/gitlab.cmi ../es6_global/src/gitlab.js : mij src/gitlab.ast
+o src/instance.ast : astj ../../src/instance.res
+o src/instance.d : deps src/instance.ast
+o src/instance.cmj src/instance.cmi ../es6_global/src/instance.js : mij src/instance.ast
+o src/generate_config.ast : astj ../../src/generate_config.res
+o src/generate_config.d : deps src/generate_config.ast
+o src/generate_config.cmj src/generate_config.cmi ../es6_global/src/generate_config.js : mij src/generate_config.ast
+o src/job/job.ast : astj ../../src/job/job.res
+o src/job/job.d : deps src/job/job.ast
+o src/job/job.cmj src/job/job.cmi ../es6_global/src/job/job.js : mij src/job/job.ast
+o src/job/conan.ast : astj ../../src/job/conan.res
+o src/job/conan.d : deps src/job/conan.ast
+o src/job/conan.cmj src/job/conan.cmi ../es6_global/src/job/conan.js : mij src/job/conan.ast
+o src/job/job_t.ast : astj ../../src/job/job_t.res
+o src/job/job_t.d : deps src/job/job_t.ast
+o src/job/job_t.cmj src/job/job_t.cmi ../es6_global/src/job/job_t.js : mij src/job/job_t.ast
+o src/job/docker.ast : astj ../../src/job/docker.res
+o src/job/docker.d : deps src/job/docker.ast
+o src/job/docker.cmj src/job/docker.cmi ../es6_global/src/job/docker.js : mij src/job/docker.ast
+o src/job/command.ast : astj ../../src/job/command.res
+o src/job/command.d : deps src/job/command.ast
+o src/job/command.cmj src/job/command.cmi ../es6_global/src/job/command.js : mij src/job/command.ast
+o src/mode/git.ast : astj ../../src/mode/git.res
+o src/mode/git.d : deps src/mode/git.ast
+o src/mode/git.cmj src/mode/git.cmi ../es6_global/src/mode/git.js : mij src/mode/git.ast
+o src/mode/mode.ast : astj ../../src/mode/mode.res
+o src/mode/mode.d : deps src/mode/mode.ast
+o src/mode/mode.cmj src/mode/mode.cmi ../es6_global/src/mode/mode.js : mij src/mode/mode.ast
+o src/mode/manual.ast : astj ../../src/mode/manual.res
+o src/mode/manual.d : deps src/mode/manual.ast
+o src/mode/manual.cmj src/mode/manual.cmi ../es6_global/src/mode/manual.js : mij src/mode/manual.ast
+o src/std/env.ast : astj ../../src/std/env.res
+o src/std/env.d : deps src/std/env.ast
+o src/std/env.cmj src/std/env.cmi ../es6_global/src/std/env.js : mij src/std/env.ast
+o src/std/file.ast : astj ../../src/std/file.res
+o src/std/file.d : deps src/std/file.ast
+o src/std/file.cmj src/std/file.cmi ../es6_global/src/std/file.js : mij src/std/file.ast
+o src/std/flat.ast : astj ../../src/std/flat.res
+o src/std/flat.d : deps src/std/flat.ast
+o src/std/flat.cmj src/std/flat.cmi ../es6_global/src/std/flat.js : mij src/std/flat.ast
+o src/std/hash.ast : astj ../../src/std/hash.res
+o src/std/hash.d : deps src/std/hash.ast
+o src/std/hash.cmj src/std/hash.cmi ../es6_global/src/std/hash.js : mij src/std/hash.ast
+o src/std/path.ast : astj ../../src/std/path.res
+o src/std/path.d : deps src/std/path.ast
+o src/std/path.cmj src/std/path.cmi ../es6_global/src/std/path.js : mij src/std/path.ast
+o src/std/proc.ast : astj ../../src/std/proc.res
+o src/std/proc.d : deps src/std/proc.ast
+o src/std/proc.cmj src/std/proc.cmi ../es6_global/src/std/proc.js : mij src/std/proc.ast
+o src/std/task.ast : astj ../../src/std/task.res
+o src/std/task.d : deps src/std/task.ast
+o src/std/task.cmj src/std/task.cmi ../es6_global/src/std/task.js : mij src/std/task.ast
+o src/std/yaml.ast : astj ../../src/std/yaml.res
+o src/std/yaml.d : deps src/std/yaml.ast
+o src/std/yaml.cmj src/std/yaml.cmi ../es6_global/src/std/yaml.js : mij src/std/yaml.ast
+o src/std/decoder.ast : astj ../../src/std/decoder.res
+o src/std/decoder.d : deps src/std/decoder.ast
+o src/std/decoder.cmj src/std/decoder.cmi ../es6_global/src/std/decoder.js : mij src/std/decoder.ast
+o src/std/encoder.ast : astj ../../src/std/encoder.res
+o src/std/encoder.d : deps src/std/encoder.ast
+o src/std/encoder.cmj src/std/encoder.cmi ../es6_global/src/std/encoder.js : mij src/std/encoder.ast

@@ -1,0 +1,98 @@
+#Start(1634710882363)
+
+  Warning number 8
+  /var/home/noverby/Work/aivero/cicd/src/mode/manual.res:17:7-21
+
+  15 │ let findInts = () => {
+  16 │   Js.Console.log("Manual Mode: Create instances from manual args")
+  17 │   let [name, version] = switch Env.get("component")->Option.map(Js.Stri
+     │ ng.split("/")) {
+  18 │   | Some([name, version]) => [name, version]
+  19 │   | _ => ["", ""]
+
+  You forgot to handle a possible case here, for example: 
+  [|  |]
+
+
+  Warning number 8
+  /var/home/noverby/Work/aivero/cicd/src/detect.res:34:7-15
+
+  32 │ 
+  33 │ let getRunnerTags = (profile) => {
+  34 │   let [_, arch] = profile->Js.String2.split("-")
+  35 │   switch arch {
+  36 │   | "x86_64" | "wasm" => Ok(["X64", "aws"])
+
+  You forgot to handle a possible case here, for example: 
+  [|  |]
+
+
+  Warning number 8
+  /var/home/noverby/Work/aivero/cicd/src/detect.res:45:7-16
+
+  43 │ // https://github.com/docker/buildx#---platformvaluevalue
+  44 │ let getDockerPlatform = (profile) => {
+  45 │   let [os, arch] = profile->Js.String2.split("-")
+  46 │   let os = switch os {
+  47 │   | "linux" => Ok("linux")
+
+  You forgot to handle a possible case here, for example: 
+  [|  |]
+
+
+  Warning number 8
+  /var/home/noverby/Work/aivero/cicd/src/job/docker.res:5:15-9:5
+
+   3 ┆ let int = zip.int
+   4 ┆ let args = int->Conan.getArgs->Array.joinWith(" ", str => str)
+   5 ┆ let tag = switch (int.name, int.tag, int.branch) {
+   6 ┆ | (Some(name), Some(tag), Some(branch)) => `${tag}:${branch}`
+   7 ┆ | (Some(name), _, Some(branch)) =>
+   8 ┆   `ghcr.io/aivero/${name}/${zip.profile->Js.String2.toLowerCase}:${bran
+     ┆ ch}`
+   9 ┆ }
+  10 ┆ let install = switch (int.folder, int.branch, int.conanInstall) {
+  11 ┆ | (Some(folder), Some(branch), Some(conanInstall)) =>
+
+  You forgot to handle a possible case here, for example: 
+  ((Some _, _, None)|(None, _, _))
+
+
+  Warning number 26
+  /var/home/noverby/Work/aivero/cicd/src/job/docker.res:5:9-11
+
+  3 ┆ let int = zip.int
+  4 ┆ let args = int->Conan.getArgs->Array.joinWith(" ", str => str)
+  5 ┆ let tag = switch (int.name, int.tag, int.branch) {
+  6 ┆ | (Some(name), Some(tag), Some(branch)) => `${tag}:${branch}`
+  7 ┆ | (Some(name), _, Some(branch)) =>
+
+  unused variable tag.
+
+
+  Warning number 27
+  /var/home/noverby/Work/aivero/cicd/src/job/docker.res:6:13-16
+
+  4 ┆ let args = int->Conan.getArgs->Array.joinWith(" ", str => str)
+  5 ┆ let tag = switch (int.name, int.tag, int.branch) {
+  6 ┆ | (Some(name), Some(tag), Some(branch)) => `${tag}:${branch}`
+  7 ┆ | (Some(name), _, Some(branch)) =>
+  8 ┆   `ghcr.io/aivero/${name}/${zip.profile->Js.String2.toLowerCase}:${branc
+    ┆ h}`
+
+  unused variable name.
+
+
+  Warning number 26
+  /var/home/noverby/Work/aivero/cicd/src/job/docker.res:10:9-15
+
+   8 ┆   `ghcr.io/aivero/${name}/${zip.profile->Js.String2.toLowerCase}:${bran
+     ┆ ch}`
+   9 ┆ }
+  10 ┆ let install = switch (int.folder, int.branch, int.conanInstall) {
+  11 ┆ | (Some(folder), Some(branch), Some(conanInstall)) =>
+  12 ┆   conanInstall->Array.map(pkg => [
+
+  unused variable install.
+
+#Done(1634710882382)

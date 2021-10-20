@@ -1,0 +1,1 @@
+src/mode/mode.cmj : src/std/env.cmj src/std/env.cmi src/std/flat.cmj src/std/flat.cmi src/mode/git.cmj src/mode/git.cmi src/instance.cmj src/instance.cmi src/job/job.cmj src/job/job.cmi src/mode/manual.cmj src/mode/manual.cmi src/std/task.cmj src/std/task.cmi
