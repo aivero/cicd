@@ -1,4 +1,4 @@
-let filterConfig = (ints: array<Instance.t>, name, version) =>
+let filter = (ints: array<Instance.t>, name, version) => {
   ints->Js.Array2.filter(int => {
     switch (int.name, int.version) {
     | (Some(cname), Some(cversion)) =>
@@ -11,6 +11,8 @@ let filterConfig = (ints: array<Instance.t>, name, version) =>
     | _ => false
     }
   })
+}
+
 
 let findInts = () => {
   Js.Console.log("Manual Mode: Create instances from manual args")
@@ -26,10 +28,6 @@ let findInts = () => {
     ->Js.String2.split("\n")
     ->Array.map(Config.loadFile)
     ->Flat.array
-    ->Result.map(conf =>
-      conf
-      ->Array.concatMany
-      ->filterConfig(name, version)
-    )
+    ->Result.map(conf => conf->Array.concatMany->filter(name, version))
   )
 }

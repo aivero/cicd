@@ -1,43 +1,34 @@
-//type cicdMode = Git | Manual
+let findNeeds = ints => {
+  let allInts =
+    Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->Task.map(e =>
+      e
+      ->Result.getExn
+      ->Js.String2.trim
+      ->Js.String2.split("\n")
+      ->Array.map(Config.loadFile)
+      ->Flat.array
+      ->Result.map(Array.concatMany)
+    )
 
-/*
-type Mode = {
-  findJobs: () => E.Either<Error, readonly Job[]>;
+  Task.all2((ints, allInts))->Task.map(((ints, allInts)) => {
+    allInts->Result.flatMap(allInts => {
+      ints->Result.map(ints => {
+        let needs = allInts->Js.Array2.filter((int: Instance.t) =>
+          switch int.name {
+          | Some(name) => ints->Array.some((int: Instance.t) =>
+              switch int.needs {
+              | Some(needs) => needs->Js.Array2.includes(name)
+              | _ => false
+              }
+            )
+          | _ => false
+          }
+        )
+        ints->Array.concat(needs)
+      })
+    })
+  })
 }
-*/
-/*
-  static async run<T extends typeof Mode>() {
-    let mode = (new this()) as InstanceType<T>;
-    if (mode.findInstances) {
-    }
-  }
- */
-/*
-  dispatchInstances(ints: Instance[]) {
-    log.info("Dispatch instances");
-
-    for (let int of ints) {
-      for (let [_, clientPayload] of Object.entries(payloads)) {
-        //let event: Event = {
-        //  owner,
-        //  repo,
-        //  event_type,
-        //  client_payload,
-        //};
-        log.info(`${Deno.inspect(clientPayload)}`);
-        //await octokit.repos.createDispatchEvent(event);
-        //let status = {
-        //  owner,
-        //  repo,
-        //  sha: client_payload.commit,
-        //  state: "pending" as const,
-        //  context: client_payload.context,
-        //};
-        //await octokit.repos.createCommitStatus(status);
-      }
-    }
-  }
- */
 
 let load = () => {
   let kind = Env.get("mode")
@@ -47,10 +38,14 @@ let load = () => {
   | _ => Git.findInts()
   }
 
-  ints->Task.map(ints => {
-    ints->Result.flatMap(ints => {
+  let ints = ints->findNeeds
+
+  ints
+  ->Task.map(res => {
+    res->Result.flatMap(ints => {
       let zips = ints->Instance.zip
       zips->Job.load
     })
-  })->Flat.task
+  })
+  ->Flat.task
 }
