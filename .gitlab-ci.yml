@@ -7,7 +7,6 @@ generate-config:
       - generated-config.yml
 
 child-pipeline:
-  image: denoland/deno:latest
   stage: test
   trigger:
     include:
