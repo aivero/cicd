@@ -129,13 +129,13 @@ let exportPkg = int => {
   }
 }
 
-let getLockFile = (triples: Task.t<result<array<pkgInfo>, string>>) => {
-  triples
+let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
+  pkgInfos
   ->Task.map(res => {
-    res->Result.map(triples =>
-      triples
-      ->Array.map(triple => {
-        switch (triple.int.name, triple.int.version) {
+    res->Result.map(pkgInfos =>
+      pkgInfos
+      ->Array.map(pkgInfo => {
+        switch (pkgInfo.int.name, pkgInfo.int.version) {
         | (Some(name), Some(version)) =>
           Proc.run(
             [
@@ -143,12 +143,12 @@ let getLockFile = (triples: Task.t<result<array<pkgInfo>, string>>) => {
               "lock",
               "create",
               `--ref=${name}/${version}`,
-              `--lockfile-out=${name}-${version}-${triple.info.revision}.lock`,
-              `-pr=${triple.profile}`,
-            ]->Array.concat(triple.int->getArgs),
+              `--lockfile-out=${name}-${version}-${pkgInfo.info.revision}.lock`,
+              `-pr=${pkgInfo.profile}`,
+            ]->Array.concat(pkgInfo.int->getArgs),
           )->Task.map(output =>
             switch output {
-            | Ok(_) => Ok(triple)
+            | Ok(_) => Ok(pkgInfo)
             | Error(e) => Error(e)
             }
           )
@@ -161,46 +161,53 @@ let getLockFile = (triples: Task.t<result<array<pkgInfo>, string>>) => {
   })
   ->Flat.task
   ->Task.map(res => {
-    res->Result.map(triples => {
-      let locks = triples->Array.map(triple => {
-        switch (triple.int.name, triple.int.version) {
-        | (Some(name), Some(version)) => `${name}-${version}-${triple.info.revision}.lock`
+    res->Result.map(pkgInfos => {
+      let locks = pkgInfos->Array.map(pkgInfo => {
+        switch (pkgInfo.int.name, pkgInfo.int.version) {
+        | (Some(name), Some(version)) => `${name}-${version}-${pkgInfo.info.revision}.lock`
         | _ => ""
         }
       })
-      Proc.run(
-        ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
-      )->Task.map(output =>
-        switch output {
-        | Ok(_) => Ok(triples)
-        | Error(e) => Error(e)
-        }
-      )
+      locks->Array.length > 0
+        ? Proc.run(
+            ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
+          )->Task.map(output =>
+            switch output {
+            | Ok(_) => Ok(pkgInfos)
+            | Error(e) => Error(e)
+            }
+          )
+        : Ok(pkgInfos)
     })
   })
   ->Flat.task
   ->Task.map(res => {
     res->Result.map(_ => {
-      Proc.run([
-        "conan",
-        "lock",
-        "bundle",
-        "build-order",
-        "lock.bundle",
-        "--json=build_order.json",
-      ])->Task.map(output =>
-        switch output {
-        | Ok(_) => res
-        | Error(e) => Error(e)
-        }
-      )
+      File.exists("build_order.json")
+        ? Proc.run([
+            "conan",
+            "lock",
+            "bundle",
+            "build-order",
+            "lock.bundle",
+            "--json=build_order.json",
+          ])->Task.map(output =>
+            switch output {
+            | Ok(_) => res
+            | Error(e) => Error(e)
+            }
+          )
+        : res
     })
   })
   ->Flat.task
   ->Task.map(res => {
     res->Result.flatMap(_ => {
-      File.read("build_order.json")
-      ->Result.map(content => content->Js.Json.parseExn->toLockfile)
+      File.exists("build_order.json")
+        ? File.read("build_order.json")->Result.map(content =>
+            content->Js.Json.parseExn->toLockfile
+          )
+        : []
     })
   })
 }
@@ -230,10 +237,12 @@ let getJob = (buildOrder, pkgInfos) => {
                 needs: switch int.needs {
                 | Some(needs) => needs
                 | None => []
-                }->Array.concat(switch buildOrder[index-1] {
-                | Some(group) => group
-                | None => []
-                }),
+                }->Array.concat(
+                  switch buildOrder[index - 1] {
+                  | Some(group) => group
+                  | None => []
+                  },
+                ),
               }: Job_t.t
             ),
           )
