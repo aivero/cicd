@@ -43,8 +43,8 @@ let load = () => {
   let kind = Env.get("mode")
 
   let ints = switch kind {
-  | Some("git") => Git.findInts()
-  | _ => Manual.findInts()
+  | Some("manual") => Manual.findInts()
+  | _ => Git.findInts()
   }
 
   ints->Task.map(ints => {
