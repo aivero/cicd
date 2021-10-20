@@ -3,3 +3,4 @@ node_modules/*
 *.lock
 lock.bundle
 .merlin
+generated-config.yml
