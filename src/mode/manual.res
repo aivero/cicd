@@ -12,7 +12,7 @@ let filterConfig = (ints: array<Instance.t>, name, version) =>
     }
   })
 
-let findJobs = () => {
+let findInts = () => {
   Js.Console.log("Manual Mode: Create instances from manual args")
   let [name, version] = switch Env.get("component")->Option.map(Js.String.split("/")) {
   | Some([name, version]) => [name, version]
@@ -22,23 +22,14 @@ let findJobs = () => {
   Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->Task.map(e =>
     e
     ->Result.getExn
-    ->Js.String.trim
-    ->Js.String.split("\n", _)
+    ->Js.String2.trim
+    ->Js.String2.split("\n")
     ->Array.map(Config.loadFile)
     ->Flat.array
     ->Result.map(conf =>
       conf
       ->Array.concatMany
       ->filterConfig(name, version)
-      ->Array.map(Job.load)
-      ->Task.all
-      ->Task.map(jobs => jobs->Array.concatMany->Flat.array)
     )
-    //-> (conf) => {
-    //  switch conf {
-    //  | Ok(conf) => Ok(conf)
-    //  | Error(error) => Error(error)
-    //  }
-    //}
-  )->Flat.task //->Task.map(jobs => jobs)
+  )
 }

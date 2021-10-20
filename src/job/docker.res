@@ -1,23 +1,33 @@
-let getJobs = (pairs: array<Instance.pair>) => {
-  pairs->Array.map(pair => {
-    let int = pair.int
+let getJobs = (zips: array<Instance.zip>) => {
+  zips->Array.map(zip => {
+    let int = zip.int
     let args = int->Conan.getArgs->Array.joinWith(" ", str => str)
     let tag = switch (int.name, int.tag, int.branch) {
     | (Some(name), Some(tag), Some(branch)) => `${tag}:${branch}`
-    | (Some(name), _, Some(branch)) => `ghcr.io/aivero/${name}/${pair.profile->Js.String.toLowerCase}:${branch}`
+    | (Some(name), _, Some(branch)) =>
+      `ghcr.io/aivero/${name}/${zip.profile->Js.String2.toLowerCase}:${branch}`
     }
     let install = switch (int.folder, int.branch, int.conanInstall) {
-    | (Some(folder), Some(branch), Some(conanInstall)) => conanInstall->Array.map((pkg) => [
+    | (Some(folder), Some(branch), Some(conanInstall)) =>
+      conanInstall->Array.map(pkg => [
         `mkdir -p ${folder}/install || true`,
         `conan install ${args}${pkg}/${branch}@ -if ${folder}/install/${pkg}`,
-    ])
+      ])
     | _ => []
     }
-    switch (int.cmds, pair->Detect.getImage) {
+    switch (int.cmds, zip->Detect.getImage) {
     | (Some(cmds), Ok(image)) =>
       (
         {
-          Ok({cmds: cmds, image: image, needs: switch pair.int.needs { | Some(needs) => needs | None => [] }})
+          Ok({
+            name: "foo",
+            script: cmds,
+            image: image,
+            needs: switch zip.int.needs {
+            | Some(needs) => needs
+            | None => []
+            },
+          })
         }: result<Job_t.t, string>
       )
     | (_, Error(err)) => Error(err)
@@ -59,8 +69,4 @@ let getJobs = (pairs: array<Instance.pair>) => {
 
   return payloads;
  */
-}
-
-let getTest = ({int, profile}: Instance.pair) => {
-  Proc.run(["ls"])->Task.await
 }

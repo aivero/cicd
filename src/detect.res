@@ -1,4 +1,4 @@
-let getImage = ({int, profile}: Instance.pair) => {
+let getImage = ({int, profile}: Instance.zip) => {
   // Base Conan image
   let base = "aivero/conan:"
 
@@ -6,8 +6,8 @@ let getImage = ({int, profile}: Instance.pair) => {
   let os = switch profile {
   | list{_, "musl", ..._ } => Ok("alpine")
   | list{"linux", ..._ } | list{"wasi", ..._} => Ok("bionic")
-  | list{"windows", ..._}  => Ok("windows")
-  | list{"macos", ..._} => Ok("macos")
+  | list{"windows", ..._ }  => Ok("windows")
+  | list{"macos", ..._ } => Ok("macos")
   | _ => Error("Could not detect image os")
   }
 

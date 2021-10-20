@@ -1,8 +1,10 @@
+open Instance
+
 @send external toString: 'a => string = "toString"
 
 let getArgs = (int: Instance.t) => {
   let args = switch Env.get("args") {
-  | Some(args) => args->Js.String.split(" ", _)
+  | Some(args) => args->Js.String2.split(" ")
   | None => []
   }
 
@@ -38,11 +40,11 @@ let getRepo = (int: Instance.t) => {
   ->Path.join
   ->File.read
   ->Result.map(content =>
-    content->Js.String.includes("Proprietary", _) ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_INTERNAL"
+    content->Js.String2.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_INTERNAL"
   )
 }
 
-let getCmds = ({int, profile}: Instance.pair): array<string> => {
+let getCmds = ({int, profile}: Instance.zip): array<string> => {
   let initCmds = [
     `conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR`,
     `conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL`,
@@ -70,20 +72,21 @@ let getCmds = ({int, profile}: Instance.pair): array<string> => {
   Array.concatMany([initCmds, cmds, [`conan remove --locks`, `conan remove * -f`]])
 }
 
-type info = {
+type conanInfo = {
   revision: string,
   reference: string,
 }
 
-type infoTriple = {
-  info: info,
+type pkgInfo = {
+  info: conanInfo,
   int: Instance.t,
   profile: string,
+  mode: Instance.mode,
 }
 
-external toInfo: 'a => array<info> = "%identity"
+external toConanInfo: 'a => array<conanInfo> = "%identity"
 
-let getInfo = ({int, profile}: Instance.pair) => {
+let getInfo = ({int, profile, mode}: Instance.zip) => {
   switch (int.name, int.version) {
   | (Some(name), Some(version)) =>
     Proc.run(
@@ -92,113 +95,174 @@ let getInfo = ({int, profile}: Instance.pair) => {
         int->getArgs,
         [`${name}/${version}@`],
       ]),
-    )->Promise.thenResolve(_ => {
-      switch File.read(`${name}-${version}-${profile}.json`) {
-      | Ok(output) =>
-        output
-        ->Js.Json.parseExn
-        ->toInfo
-        ->Js.Array2.find(e => e.reference == `${name}/${version}`)
-        ->(
-          find =>
-            switch find {
-            | Some(info) => Some({int: int, profile: profile, info: info})
-            | None => None
-            }
-        )
+    )->Task.map(res => {
+      res->Result.flatMap(_ =>
+        switch File.read(`${name}-${version}-${profile}.json`) {
+        | Ok(output) =>
+          output
+          ->Js.Json.parseExn
+          ->toConanInfo
+          ->Js.Array2.find(e => e.reference == `${name}/${version}`)
+          ->(
+            find =>
+              switch find {
+              | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode})
+              | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
+              }
+          )
 
-      //switch output
-      //->(bla => { Js.Console.log(`start| |${output}| |end`); bla })
-      //->Js.Json.parseExn
-      //->toInfo
-      //->Js.Array2.find(e => e.revision == `${name}/${version}`) {
-      //| Some(info) => Some({int: int, profile: profile, info: info})
-      //| None => None
-      //}
-      | Error(_) => None
-      }
+        | Error(e) => Error(e)
+        }
+      )
     })
-  | _ => None->Promise.resolve
+  | _ => Error("Name or version not defined")->Task.resolve
   }
 }
 
-let getLockFile = (triples: Js.Promise.t<array<option<infoTriple>>>) => {
+@send external toLockfile: 'a => array<array<string>> = "%identity"
+
+let exportPkg = int => {
+  switch (int.name, int.version, int.folder) {
+  | (Some(name), Some(version), Some(folder)) =>
+    Proc.run(["conan", "export", folder, `${name}/${version}@`])
+  | _ => Task.resolve(Error("Name, version or folder not defined"))
+  }
+}
+
+let getLockFile = (triples: Task.t<result<array<pkgInfo>, string>>) => {
   triples
-  ->Promise.then(triple =>
-    triple
-    ->Array.map(triple => {
-      let Some({int}) = triple
-      switch (int.name, int.version, int.folder) {
-      | (Some(name), Some(version), Some(folder)) =>
-        Proc.run(["conan", "export", folder, `${name}/${version}@`])
-      }->Promise.thenResolve(_ => triple)
-    })
-    ->Promise.all
-  )
-  ->Promise.then(triple => {
-    triple
-    ->Array.map(triple => {
-      let {int, profile, info} = triple->Option.getExn
-      switch (int.name, int.version, int.folder) {
-      | (Some(name), Some(version), Some(folder)) =>
-        Proc.run(
-          [
-            "conan",
-            "lock",
-            "create",
-            `--ref=${name}/${version}`,
-            `--lockfile-out=${name}-${version}-${info.revision}.lock`,
-            `-pr=${profile}`,
-          ]->Array.concat(int->getArgs),
-        )
-      }
-    })
-    ->Promise.all
-    ->Promise.thenResolve(_ => triple)
+  ->Task.map(res => {
+    res->Result.map(triples =>
+      triples
+      ->Array.map(triple => {
+        switch (triple.int.name, triple.int.version) {
+        | (Some(name), Some(version)) =>
+          Proc.run(
+            [
+              "conan",
+              "lock",
+              "create",
+              `--ref=${name}/${version}`,
+              `--lockfile-out=${name}-${version}-${triple.info.revision}.lock`,
+              `-pr=${triple.profile}`,
+            ]->Array.concat(triple.int->getArgs),
+          )->Task.map(output =>
+            switch output {
+            | Ok(_) => Ok(triple)
+            | Error(e) => Error(e)
+            }
+          )
+        | _ => Task.resolve(Error("This should not happen"))
+        }
+      })
+      ->Task.all
+      ->Task.map(Flat.array)
+    )
   })
-  ->Promise.then(triple => {
-    let locks = triple->Array.map(triple => {
-      let {int, profile, info} = triple->Option.getExn
-      switch (int.name, int.version, int.folder) {
-      | (Some(name), Some(version), Some(folder)) => `${name}-${version}-${info.revision}.lock`
-      }
+  ->Flat.task
+  ->Task.map(res => {
+    res->Result.map(triples => {
+      let locks = triples->Array.map(triple => {
+        switch (triple.int.name, triple.int.version) {
+        | (Some(name), Some(version)) => `${name}-${version}-${triple.info.revision}.lock`
+        | _ => ""
+        }
+      })
+      Proc.run(
+        ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
+      )->Task.map(output =>
+        switch output {
+        | Ok(_) => Ok(triples)
+        | Error(e) => Error(e)
+        }
+      )
     })
-    Proc.run(["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks))
   })
-  ->Promise.then(_ => {
-    Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
+  ->Flat.task
+  ->Task.map(res => {
+    res->Result.map(_ => {
+      Proc.run([
+        "conan",
+        "lock",
+        "bundle",
+        "build-order",
+        "lock.bundle",
+        "--json=build_order.json",
+      ])->Task.map(output =>
+        switch output {
+        | Ok(_) => res
+        | Error(e) => Error(e)
+        }
+      )
+    })
   })
-  ->Promise.thenResolve(_ => {
-    File.read("build_order.json")
+  ->Flat.task
+  ->Task.map(res => {
+    res->Result.flatMap(_ => {
+      File.read("build_order.json")
+      ->Result.map(content => content->Js.Json.parseExn->toLockfile)
+    })
   })
 }
 
-let getJobs = (pair: array<Instance.pair>) => {
-  let triples = pair->Array.map(getInfo)->Promise.all
-  let lockfile = getLockFile(triples)
-  let bla= lockfile->Task.map(Js.Console.log)
-  let jobs = triples->Promise.thenResolve(triples =>
-    triples->Array.map(triple => {
-      switch triple {
-      | Some(triple) =>
-        switch {int: triple.int, profile: triple.profile}->Detect.getImage {
+let getJob = (buildOrder, pkgInfos) => {
+  buildOrder
+  ->Array.mapWithIndex((index, group) => {
+    group
+    ->Array.map(pkg => {
+      let revision = (pkg->Js.String2.split("#"))[1]
+      let foundPkg = pkgInfos->Js.Array2.find(e => {
+        switch revision {
+        | Some(revision) if revision == e.info.revision => true
+        | _ => false
+        }
+      })
+      switch foundPkg {
+      | Some({int, profile, mode}) =>
+        switch {int: int, profile: profile, mode: mode}->Detect.getImage {
         | Ok(image) =>
           Ok(
             (
               {
-                cmds: {int: triple.int, profile: triple.profile}->getCmds,
+                name: pkg,
+                script: {int: int, profile: profile, mode: mode}->getCmds,
                 image: image,
-                needs: switch triple.int.needs {
+                needs: switch int.needs {
                 | Some(needs) => needs
                 | None => []
-                },
+                }->Array.concat(switch buildOrder[index-1] {
+                | Some(group) => group
+                | None => []
+                }),
               }: Job_t.t
             ),
           )
         | Error(err) => Error(err)
         }
+      | None => Error(`Couldn't find package: ${pkg}`)
       }
     })
-  )
-  jobs
+    ->Flat.array
+  })
+  ->Flat.array
+  ->Result.map(Array.concatMany)
+}
+
+let getJobs = (zips: array<Instance.zip>) => {
+  let zips = zips->Js.Array2.filter(zip => zip.mode == #conan)
+  let pkgInfos =
+    zips
+    ->Array.map(zip => zip.int->exportPkg)
+    ->Task.all
+    ->Task.flatMap(_ => {
+      zips->Array.map(getInfo)->Task.all->Task.map(Flat.array)
+    })
+  let lockfile = pkgInfos->getLockFile
+  Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
+    switch (pkgInfos, lockfile) {
+    | (Ok(pkgInfos), Ok(lockfile)) => lockfile->getJob(pkgInfos)
+    | (Error(e), _) => Error(e)
+    | (_, Error(e)) => Error(e)
+    }
+  })
 }

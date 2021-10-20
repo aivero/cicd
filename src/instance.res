@@ -105,14 +105,46 @@ let create = (folderPath, int: Js.Nullable.t<t>) => {
   int
 }
 
-type pair = {
+type mode = [
+  | #conan
+  | #docker
+  | #command
+  | #"conan-install-tarball"
+  | #"conan-install-script"
+]
+
+type zip = {
   int: t,
   profile: string,
+  mode: mode
 }
 
-let zip = (int: t) =>
-  switch int.profiles {
-  | Some(profiles) => Ok(profiles->Array.map(profile => {int: int, profile: profile}))
-  | None => Error("No profiles")
+let parseMode = str => {
+  switch str {
+  | "conan" => #conan
+  | "docker" => #docker
+  | "conan-install-tarball" => #"conan-install-tarball"
+  | "conan-install-script" => #"conan-install-script"
+  | _ => #command
   }
+}
 
+let getMode = (int: t) => {
+  switch (int.mode, int.folder) {
+  | (Some(mode), _) => parseMode(mode)
+  | (_, Some(folder)) if File.exists(Path.join([folder, "conanfile.py"])) => #conan
+  | (_, Some(folder)) if File.exists(Path.join([folder, "Dockerfile"])) => #docker
+  | (_, _) => #command
+  }
+}
+
+let zip = ints =>
+    ints
+    ->Array.map(int =>
+      switch int.profiles {
+      | Some(profiles) => Ok(profiles->Array.map(profile => {int: int, profile: profile, mode: int->getMode }))
+      | None => Error("No profiles")
+      }
+    )
+    ->Flat.array
+    ->Result.map(Array.concatMany)

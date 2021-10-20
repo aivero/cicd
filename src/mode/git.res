@@ -11,14 +11,14 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 let handleConfigChange = confPath => {
   // New config.yml
   let intsNew =
-    Proc.run(["git", "show", `HEAD:${confPath}`])->Task.thenResolve(conf =>
+    Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(conf =>
       switch (conf) {
       | Ok(conf) => conf->Config.load(confPath)->Flat.array
       | Error(conf) => Error(conf)
       }
     )
   let intsOld =
-    Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.thenResolve(conf =>
+    Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(conf =>
       switch (conf) {
       | Ok(conf) => conf->Config.load(confPath)->Flat.array
       | Error(conf) => Error(conf)
@@ -28,12 +28,12 @@ let handleConfigChange = confPath => {
 
   (intsNew, intsOld, filesOld)
   ->Task.all3
-  ->Task.flatMap(((intsNew, intsOld, filesOld)) => {
+  ->Task.map(((intsNew, intsOld, filesOld)) => {
     switch (intsNew, intsOld, filesOld) {
-    | (Ok(intsNew), Ok(intsOld), Ok(filesOld)) if filesOld->Js.String.includes(confPath) =>
-      intsNew->cmpInts(intsOld)->Array.map(Job.load)->Task.all->Task.map((a) => a->Array.concatMany->Flat.array)
-    | (Error(err), _, _) => Error(err)->Task.resolve
-    | _ => Ok([])->Task.resolve
+    | (Ok(intsNew), Ok(intsOld), Ok(filesOld)) if filesOld->Js.String2.includes(confPath) =>
+      Ok(intsNew->cmpInts(intsOld))
+    | (Error(err), _, _) => Error(err)
+    | _ => Ok([])
     }
   })
 }
@@ -41,17 +41,15 @@ let handleConfigChange = confPath => {
 let handleFileChange = (confPath, filePath) => {
   switch confPath->Config.loadFile {
   | Ok(ints) =>
-    ints
+    Ok(ints
     ->Js.Array2.filter(({folder}) => {
       switch folder {
       | Some(folder) => folder
       | None => ""
-      }->Js.String.endsWith(filePath->Path.dirname)
-    })
-    ->Array.map(Job.load)
-    ->Task.all->Task.map((a) => a->Array.concatMany->Flat.array)
-  | Error(err) => Error(err)->Task.resolve
-  }
+      }->Js.String2.endsWith(filePath->Path.dirname)
+    }))
+  | Error(err) => Error(err)
+  }->Task.resolve
 }
 
 let handleChange = file => {
@@ -63,17 +61,17 @@ let handleChange = file => {
   }
 }
 
-let findJobs = () => {
+let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
-  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->Task.then(output =>
+  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->Task.flatMap(output =>
     output
     ->Result.getExn
-    ->Js.String.trim
+    ->Js.String2.trim
     ->Js.String2.split("\n")
     ->Js.Array2.filter(File.exists)
-    ->Js.Array.reduce((a, file) => {
+    ->Js.Array2.reduce((a, file) => {
       a->Array.concat(file->handleChange)
-    }, [], _)
-    ->Task.all->Task.then((tasks) => tasks->Flat.array->Result.map(Array.concatMany)->Task.resolve)
+    }, [])
+    ->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
   )
 }

@@ -1,20 +1,18 @@
-
-
-/*
-type color = [ | `conan | `docker |  ];
-*/
-
 type mode = [
-  #conan | #docker | #command | #"conan-install-tarball" | #"conan-install-script"
+  | #conan
+  | #docker
+  | #command
+  | #"conan-install-tarball"
+  | #"conan-install-script"
 ]
 
-let parseMode = (str) => {
+let parseMode = str => {
   switch str {
-  | "conan" => #conan 
-  | "docker" => #docker 
-  | "conan-install-tarball" => #"conan-install-tarball" 
+  | "conan" => #conan
+  | "docker" => #docker
+  | "conan-install-tarball" => #"conan-install-tarball"
   | "conan-install-script" => #"conan-install-script"
-  | _ => #command 
+  | _ => #command
   }
 }
 
@@ -25,15 +23,23 @@ let getMode = (int: Instance.t) => {
   | (_, Some(folder)) if File.exists(Path.join([folder, "Dockerfile"])) => #docker
   | (_, _) => #command
   }
-};
+}
 
-let load = (int) => {
-  let zip = Instance.zip(int)
-  switch (zip, getMode(int)) {
-  | (Ok(zip), #conan) => Conan.getJobs(zip)
-  | (Ok(zip), #command) => Command.getJobs(zip)
+let load = ints => {
+  ints->Result.map(ints => {
+
+    //Js.Array2.concatMany([], [
+    Task.all([Command.getJobs(ints), Conan.getJobs(ints)])
+    ->Task.map(jobs => jobs->Flat.array->Result.map(Array.concatMany))
+    ->(b => b)
+
+    //])
+  })
+  //switch (Instance.zip(int), getMode(int)) {
+  //| (Ok(zip), #conan) => Conan.getJobs(zip)
+  //| (Ok(zip), #command) => Command.getJobs(zip)
   //| JobMode.Docker => getConanDockerJobs(conf)
   //| JobMode.ConanInstallTarball => getConanDockerJobs(conf)
   //| JobMode.ConanInstallScript => getConanDockerJobs(conf)
-  }
+  //}
 }

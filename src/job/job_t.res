@@ -1,9 +1,9 @@
 type t = {
-  //name: string;
+  name: string,
   //version: string;
   image: string,
   //tags: string[];
-  cmds: array<string>,
+  script: array<string>,
   needs: array<string>
   //mode: JobMode;
 }

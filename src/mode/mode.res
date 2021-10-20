@@ -42,10 +42,15 @@ type Mode = {
 let load = () => {
   let kind = Env.get("mode")
 
-  switch kind {
-  | Some("git") => Git.findJobs()
-  | _ => Manual.findJobs()
-  //| "manual" => Manual.findJobs()
+  let ints = switch kind {
+  | Some("git") => Git.findInts()
+  | _ => Manual.findInts()
   }
-}
 
+  ints->Task.map(ints => {
+    ints->Result.flatMap(ints => {
+      let zips = ints->Instance.zip
+      zips->Job.load
+    })
+  })->Flat.task
+}

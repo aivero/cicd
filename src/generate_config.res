@@ -1,9 +1,14 @@
-let main = () => {
-  Mode.load()->Task.flatMap((res) => Js.Console.log(res)->Task.resolve)->ignore
-  //let bla = res->then((a) => Js.log(a)->resolve)
-  //let bla = [res]->all
 
+@send external toString: 'a => string = "toString"
+
+let main = () => {
+  let _ = Mode.load()->Task.flatMap(res => switch res {
+  | Ok(val) => {
+    val->Gitlab.generate
+    `Ok`->Js.Console.log->Task.resolve
+  }
+  | Error(e) => `Error: ${e->toString}`->Js.Console.log->Task.resolve
+  }) 
 }
 
 main()
-//Sys.command("ls");
