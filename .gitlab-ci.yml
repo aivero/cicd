@@ -1,5 +1,5 @@
 generate-config:
-  image: denoland/deno:1.14.3
+  image: denoland/deno:alpine-1.14.3
   stage: build
   script:
     - apk update
