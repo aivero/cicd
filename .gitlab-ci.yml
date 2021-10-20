@@ -1,9 +1,7 @@
 generate-config:
-  image: denoland/deno:alpine-1.14.3
+  image: aivero/conan:bionic-x86_64
   stage: build
   script:
-    - apk update
-    - apk add git
     - deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/generate_config.js
   artifacts:
     paths:
