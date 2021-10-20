@@ -177,7 +177,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
             | Error(e) => Error(e)
             }
           )
-        : Ok(pkgInfos)
+        : Ok(pkgInfos)->Task.resolve
     })
   })
   ->Flat.task
@@ -197,7 +197,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
             | Error(e) => Error(e)
             }
           )
-        : res
+        : res->Task.resolve
     })
   })
   ->Flat.task
@@ -207,7 +207,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
         ? File.read("build_order.json")->Result.map(content =>
             content->Js.Json.parseExn->toLockfile
           )
-        : []
+        : Ok([])
     })
   })
 }
