@@ -88,16 +88,17 @@ external toConanInfo: 'a => array<conanInfo> = "%identity"
 
 let getInfo = ({int, profile, mode}: Instance.zip) => {
   switch (int.name, int.version) {
-  | (Some(name), Some(version)) =>
+  | (Some(name), Some(version)) => {
+    let hash = Hash.hash({ int, profile, mode })
     Proc.run(
       Array.concatMany([
-        ["conan", "info", "-j", `${name}-${version}-${profile}.json`, `-pr=${profile}`],
+        ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
         int->getArgs,
         [`${name}/${version}@`],
       ]),
     )->Task.map(res => {
       res->Result.flatMap(_ =>
-        switch File.read(`${name}-${version}-${profile}.json`) {
+        switch File.read(`${name}-${version}-${hash}.json`) {
         | Ok(output) =>
           output
           ->Js.Json.parseExn
@@ -115,6 +116,7 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
         }
       )
     })
+  }
   | _ => Error("Name or version not defined")->Task.resolve
   }
 }
