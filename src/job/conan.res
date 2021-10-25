@@ -183,7 +183,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   ->Flat.task
   ->Task.map(res => {
     res->Result.map(_ => {
-      File.exists("build_order.json")
+      File.exists("lock.bundle")
         ? Proc.run([
             "conan",
             "lock",
@@ -234,7 +234,7 @@ let getJob = (buildOrder, pkgInfos) => {
                 name: pkg,
                 script: {int: int, profile: profile, mode: mode}->getCmds,
                 image: image,
-                needs: switch int.needs {
+                needs: switch int.req {
                 | Some(needs) => needs
                 | None => []
                 }->Array.concat(

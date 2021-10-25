@@ -27,13 +27,9 @@ let getMode = (int: Instance.t) => {
 
 let load = ints => {
   ints->Result.map(ints => {
-
-    //Js.Array2.concatMany([], [
     Task.all([Command.getJobs(ints), Conan.getJobs(ints)])
     ->Task.map(jobs => jobs->Flat.array->Result.map(Array.concatMany))
     ->(b => b)
-
-    //])
   })
   //switch (Instance.zip(int), getMode(int)) {
   //| (Ok(zip), #conan) => Conan.getJobs(zip)

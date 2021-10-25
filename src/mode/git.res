@@ -9,7 +9,6 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 }
 
 let handleConfigChange = confPath => {
-  // New config.yml
   let intsNew =
     Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(conf =>
       switch (conf) {
@@ -63,15 +62,17 @@ let handleChange = file => {
 
 let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
-  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->Task.flatMap(output =>
-    output
-    ->Result.getExn
-    ->Js.String2.trim
-    ->Js.String2.split("\n")
-    ->Js.Array2.filter(File.exists)
-    ->Js.Array2.reduce((a, file) => {
-      a->Array.concat(file->handleChange)
-    }, [])
-    ->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
+  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->Task.map(res =>
+    res->Result.map(output => {
+      output->Js.String2.trim
+      ->Js.String2.split("\n")
+      ->Js.Array2.filter(File.exists)
+      ->Js.Array2.reduce((a, file) => {
+        a->Array.concat(file->handleChange)
+      }, [])
+      ->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
+    })
+    //->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
   )
+  ->Flat.task
 }

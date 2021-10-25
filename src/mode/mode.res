@@ -16,7 +16,7 @@ let findNeeds = ints => {
         let needs = allInts->Js.Array2.filter((int: Instance.t) =>
           switch int.name {
           | Some(name) => ints->Array.some((int: Instance.t) =>
-              switch int.needs {
+              switch int.req {
               | Some(needs) => needs->Js.Array2.includes(name)
               | _ => false
               }

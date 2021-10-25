@@ -20,7 +20,8 @@ type t = {
   image: option<string>,
   tags: option<array<string>>,
   mode: option<string>,
-  needs: option<array<string>>,
+  req: option<array<string>>,
+  revReq: option<array<string>>,
   // Conan
   profiles: option<array<string>>,
   settings: option<Js.Dict.t<string>>,
@@ -48,7 +49,8 @@ let empty: t = {
   image: None,
   tags: None,
   mode: None,
-  needs: None,
+  req: None,
+  revReq: None,
   // Conan
   profiles: None,
   settings: None,
