@@ -1,4 +1,6 @@
-let findNeeds = ints => {
+open Instance
+
+let findReqs = ints => {
   let allInts =
     Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->Task.map(e =>
       e
@@ -11,22 +13,28 @@ let findNeeds = ints => {
     )
 
   Task.all2((ints, allInts))->Task.map(((ints, allInts)) => {
-    allInts->Result.flatMap(allInts => {
-      ints->Result.map(ints => {
-        let needs = allInts->Js.Array2.filter((int: Instance.t) =>
+    switch (ints, allInts) {
+    | (Ok(ints), Ok(allInts)) => {
+        let reqs = ints->Array.map((int) => switch int.req {
+        | Some(req) => req
+        | None => []
+        })->Array.concatMany
+        let reqs = allInts->Js.Array2.filter((int) => {
           switch int.name {
-          | Some(name) => ints->Array.some((int: Instance.t) =>
-              switch int.req {
-              | Some(needs) => needs->Js.Array2.includes(name)
-              | _ => false
-              }
-            )
-          | _ => false
+          | Some(name) => reqs->Js.Array2.includes(name)
+          | None => false
           }
-        )
-        ints->Array.concat(needs)
-      })
-    })
+          &&
+          !(ints->Array.some((int) => switch int.name {
+          | Some(name) => reqs->Js.Array2.includes(name)
+          | None => false
+          }))
+        })
+        Ok(ints->Array.concat(reqs))
+      }
+    | (Error(error), _) => Error(error)
+    | (_, Error(error)) => Error(error)
+    }
   })
 }
 
@@ -38,7 +46,7 @@ let load = () => {
   | _ => Git.findInts()
   }
 
-  let ints = ints->findNeeds
+  let ints = ints->findReqs
 
   ints
   ->Task.map(res => {
