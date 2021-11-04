@@ -278,8 +278,11 @@ let getJobs = (zips: array<Instance.zip>) => {
     zips
     ->Array.map(zip => zip.int->exportPkg)
     ->Task.all
-    ->Task.flatMap(_ => {
-      zips->Array.map(getInfo)->Task.all->Task.map(Flat.array)
+    ->Task.flatMap(exportPkgs => {
+      switch exportPkgs->Flat.array {
+      | Ok(_) => zips->Array.map(getInfo)->Task.all->Task.map(Flat.array)
+      | Error(error) => Error(error)->Task.resolve
+      }
     })
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
