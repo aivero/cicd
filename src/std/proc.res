@@ -27,3 +27,4 @@ let run = (cmd) => {
 	));
 };
 
+@val external exit: int => unit = "Deno.exit"
