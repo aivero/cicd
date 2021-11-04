@@ -129,24 +129,22 @@ let conanInit = (zips: array<Instance.zip>) => {
   | (Some(url), Some(dir)) => (url, dir)
   | _ => ("", "")
   }
-  let config = Proc.run([
-    "conan",
-    "config",
-    "install",
-    url,
-    "-sf",
-    dir,
-  ])
+  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])
+  let exportPkgs = zips->Js.Array2.reduce((a, zip) => {
+    switch (zip.int.name, zip.int.version, zip.int.folder) {
+    | (Some(name), Some(version), Some(folder)) =>
+      a->Array.some(e => e == (`${name}/${version}@`, folder))
+        ? a
+        : a->Array.concat([(`${name}/${version}@`, folder)])
+    | _ => a
+    }
+  }, [])
   config->Task.flatMap(config =>
     switch config {
     | Ok(_) =>
-      zips
-      ->Array.map(zip => {
-        switch (zip.int.name, zip.int.version, zip.int.folder) {
-        | (Some(name), Some(version), Some(folder)) =>
-          Proc.run(["conan", "export", folder, `${name}/${version}@`])
-        | _ => Task.resolve(Error("Name, version or folder not defined"))
-        }
+      exportPkgs
+      ->Array.map(((pkg, folder)) => {
+        Proc.run(["conan", "export", folder, pkg])
       })
       ->Task.all
       ->Task.map(Flat.array)
