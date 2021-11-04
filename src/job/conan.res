@@ -12,7 +12,7 @@ type pkgInfo = {
   int: Instance.t,
   profile: string,
   mode: Instance.mode,
-  hash: string
+  hash: string,
 }
 
 let getArgs = (int: Instance.t) => {
@@ -85,8 +85,6 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   Array.concatMany([initCmds, cmds, [`conan remove --locks`, `conan remove * -f`]])
 }
 
-
-
 external toConanInfo: 'a => array<conanInfo> = "%identity"
 
 let getInfo = ({int, profile, mode}: Instance.zip) => {
@@ -126,12 +124,35 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
 
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
-let exportPkg = int => {
-  switch (int.name, int.version, int.folder) {
-  | (Some(name), Some(version), Some(folder)) =>
-    Proc.run(["conan", "export", folder, `${name}/${version}@`])
-  | _ => Task.resolve(Error("Name, version or folder not defined"))
+let conanInit = (zips: array<Instance.zip>) => {
+  let (url, dir) = switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR")) {
+  | (Some(url), Some(dir)) => (url, dir)
+  | _ => ("", "")
   }
+  let config = Proc.run([
+    "conan",
+    "config",
+    "install",
+    url,
+    "-sf",
+    dir,
+  ])
+  config->Task.flatMap(config =>
+    switch config {
+    | Ok(_) =>
+      zips
+      ->Array.map(zip => {
+        switch (zip.int.name, zip.int.version, zip.int.folder) {
+        | (Some(name), Some(version), Some(folder)) =>
+          Proc.run(["conan", "export", folder, `${name}/${version}@`])
+        | _ => Task.resolve(Error("Name, version or folder not defined"))
+        }
+      })
+      ->Task.all
+      ->Task.map(Flat.array)
+    | Error(error) => Error(error)->Task.resolve
+    }
+  )
 }
 
 let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
@@ -157,7 +178,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
             | Error(e) => Error(e)
             }
           )
-        | _ => Task.resolve(Error("This should not happen"))
+        | _ => Error("This should not happen")->Task.resolve
         }
       })
       ->Task.all
@@ -230,9 +251,13 @@ let getJob = (buildOrder, pkgInfos) => {
         | None => false
         }
       })
-      foundPkgs->Array.map(foundPkg => {
+      foundPkgs
+      ->Array.map(foundPkg => {
         let {int, profile, mode, hash} = foundPkg
-        switch ((pkg->Js.String2.split("#"))[0], {int: int, profile: profile, mode: mode}->Detect.getImage) {
+        switch (
+          (pkg->Js.String2.split("#"))[0],
+          {int: int, profile: profile, mode: mode}->Detect.getImage,
+        ) {
         | (Some(pkg), Ok(image)) =>
           Ok(
             (
@@ -255,15 +280,21 @@ let getJob = (buildOrder, pkgInfos) => {
         | (_, Error(err)) => Error(err)
         | (None, _) => Error(`Invalid package: ${pkg}`)
         }
-      })->Array.concat([Ok({
-        name: pkg,
-        script: [],
-        image: "",
-        needs: foundPkgs->Array.map(foundPkg => switch (pkg->Js.String2.split("#"))[0] {
-        | Some(pkg) => `${pkg}${foundPkg.hash}`
-        | _ => `Invalid package: ${pkg}`
-        })
-      })])->Flat.array
+      })
+      ->Array.concat([
+        Ok({
+          name: pkg,
+          script: [],
+          image: "",
+          needs: foundPkgs->Array.map(foundPkg =>
+            switch (pkg->Js.String2.split("#"))[0] {
+            | Some(pkg) => `${pkg}${foundPkg.hash}`
+            | _ => `Invalid package: ${pkg}`
+            }
+          ),
+        }),
+      ])
+      ->Flat.array
     })
     ->Flat.array
     ->Result.map(Array.concatMany)
@@ -276,14 +307,13 @@ let getJobs = (zips: array<Instance.zip>) => {
   let zips = zips->Js.Array2.filter(zip => zip.mode == #conan)
   let pkgInfos =
     zips
-    ->Array.map(zip => zip.int->exportPkg)
-    ->Task.all
-    ->Task.flatMap(exportPkgs => {
-      switch exportPkgs->Flat.array {
+    ->conanInit
+    ->Task.flatMap(exportPkgs =>
+      switch exportPkgs {
       | Ok(_) => zips->Array.map(getInfo)->Task.all->Task.map(Flat.array)
       | Error(error) => Error(error)->Task.resolve
       }
-    })
+    )
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
     switch (pkgInfos, lockfile) {
