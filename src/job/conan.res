@@ -2,6 +2,19 @@ open Instance
 
 @send external toString: 'a => string = "toString"
 
+type conanInfo = {
+  revision: string,
+  reference: string,
+}
+
+type pkgInfo = {
+  info: conanInfo,
+  int: Instance.t,
+  profile: string,
+  mode: Instance.mode,
+  hash: string
+}
+
 let getArgs = (int: Instance.t) => {
   let args = switch Env.get("args") {
   | Some(args) => args->Js.String2.split(" ")
@@ -72,51 +85,41 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   Array.concatMany([initCmds, cmds, [`conan remove --locks`, `conan remove * -f`]])
 }
 
-type conanInfo = {
-  revision: string,
-  reference: string,
-}
 
-type pkgInfo = {
-  info: conanInfo,
-  int: Instance.t,
-  profile: string,
-  mode: Instance.mode,
-}
 
 external toConanInfo: 'a => array<conanInfo> = "%identity"
 
 let getInfo = ({int, profile, mode}: Instance.zip) => {
   switch (int.name, int.version) {
   | (Some(name), Some(version)) => {
-    let hash = Hash.hash({ int, profile, mode })
-    Proc.run(
-      Array.concatMany([
-        ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
-        int->getArgs,
-        [`${name}/${version}@`],
-      ]),
-    )->Task.map(res => {
-      res->Result.flatMap(_ =>
-        switch File.read(`${name}-${version}-${hash}.json`) {
-        | Ok(output) =>
-          output
-          ->Js.Json.parseExn
-          ->toConanInfo
-          ->Js.Array2.find(e => e.reference == `${name}/${version}`)
-          ->(
-            find =>
-              switch find {
-              | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode})
-              | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
-              }
-          )
+      let hash = Hash.hash({int: int, profile: profile, mode: mode})
+      Proc.run(
+        Array.concatMany([
+          ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
+          int->getArgs,
+          [`${name}/${version}@`],
+        ]),
+      )->Task.map(res => {
+        res->Result.flatMap(_ =>
+          switch File.read(`${name}-${version}-${hash}.json`) {
+          | Ok(output) =>
+            output
+            ->Js.Json.parseExn
+            ->toConanInfo
+            ->Js.Array2.find(e => e.reference == `${name}/${version}`)
+            ->(
+              find =>
+                switch find {
+                | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode, hash: hash})
+                | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
+                }
+            )
 
-        | Error(e) => Error(e)
-        }
-      )
-    })
-  }
+          | Error(e) => Error(e)
+          }
+        )
+      })
+    }
   | _ => Error("Name or version not defined")->Task.resolve
   }
 }
@@ -145,7 +148,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
               "lock",
               "create",
               `--ref=${name}/${version}`,
-              `--lockfile-out=${name}-${version}-${pkgInfo.info.revision}.lock`,
+              `--lockfile-out=${name}-${version}-${Hash.hash(pkgInfo)}.lock`,
               `-pr=${pkgInfo.profile}`,
             ]->Array.concat(pkgInfo.int->getArgs),
           )->Task.map(output =>
@@ -166,10 +169,11 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
     res->Result.map(pkgInfos => {
       let locks = pkgInfos->Array.map(pkgInfo => {
         switch (pkgInfo.int.name, pkgInfo.int.version) {
-        | (Some(name), Some(version)) => `${name}-${version}-${pkgInfo.info.revision}.lock`
+        | (Some(name), Some(version)) => `${name}-${version}-${Hash.hash(pkgInfo)}.lock`
         | _ => ""
         }
       })
+      locks->Js.Console.log
       locks->Array.length > 0
         ? Proc.run(
             ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
@@ -220,20 +224,20 @@ let getJob = (buildOrder, pkgInfos) => {
     group
     ->Array.map(pkg => {
       let revision = (pkg->Js.String2.split("#"))[1]
-      let foundPkg = pkgInfos->Js.Array2.find(e => {
+      let foundPkgs = pkgInfos->Js.Array2.filter(e => {
         switch revision {
-        | Some(revision) if revision == e.info.revision => true
-        | _ => false
+        | Some(revision) => revision == e.info.revision
+        | None => false
         }
       })
-      switch foundPkg {
-      | Some({int, profile, mode}) =>
-        switch {int: int, profile: profile, mode: mode}->Detect.getImage {
-        | Ok(image) =>
+      foundPkgs->Array.map(foundPkg => {
+        let {int, profile, mode, hash} = foundPkg
+        switch ((pkg->Js.String2.split("#"))[0], {int: int, profile: profile, mode: mode}->Detect.getImage) {
+        | (Some(pkg), Ok(image)) =>
           Ok(
             (
               {
-                name: pkg,
+                name: `${pkg}${hash}`,
                 script: {int: int, profile: profile, mode: mode}->getCmds,
                 image: image,
                 needs: switch int.req {
@@ -248,12 +252,21 @@ let getJob = (buildOrder, pkgInfos) => {
               }: Job_t.t
             ),
           )
-        | Error(err) => Error(err)
+        | (_, Error(err)) => Error(err)
+        | (None, _) => Error(`Invalid package: ${pkg}`)
         }
-      | None => Error(`Couldn't find package: ${pkg}`)
-      }
+      })->Array.concat([Ok({
+        name: pkg,
+        script: [],
+        image: "",
+        needs: foundPkgs->Array.map(foundPkg => switch (pkg->Js.String2.split("#"))[0] {
+        | Some(pkg) => `${pkg}${foundPkg.hash}`
+        | _ => `Invalid package: ${pkg}`
+        })
+      })])->Flat.array
     })
     ->Flat.array
+    ->Result.map(Array.concatMany)
   })
   ->Flat.array
   ->Result.map(Array.concatMany)
