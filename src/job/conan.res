@@ -282,7 +282,7 @@ let getJob = (buildOrder, pkgInfos) => {
       ->Array.concat([
         Ok({
           name: pkg,
-          script: None,
+          script: Some(["echo"]),
           image: None,
           needs: foundPkgs->Array.map(foundPkg =>
             switch (pkg->Js.String2.split("#"))[0] {

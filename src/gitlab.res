@@ -1,6 +1,6 @@
 let generate = (jobs: array<Job_t.t>) => {
   let encode = Encoder.new()->Encoder.encode
-  let jobs = jobs->Array.length > 0 ? jobs : [{name: "empty", needs: [], script: None, image: None}]
+  let jobs = jobs->Array.length > 0 ? jobs : [{name: "empty", needs: [], script: Some(["echo"]), image: None}]
 
   let _ =
     jobs
