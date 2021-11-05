@@ -3,7 +3,7 @@ type t = {
   //version: string;
   image: option<string>,
   //tags: string[];
-  script: array<string>,
+  script: option<array<string>>,
   needs: array<string>
   //mode: JobMode;
 }

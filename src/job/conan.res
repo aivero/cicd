@@ -261,7 +261,7 @@ let getJob = (buildOrder, pkgInfos) => {
             (
               {
                 name: `${pkg}${hash}`,
-                script: {int: int, profile: profile, mode: mode}->getCmds,
+                script: Some({int: int, profile: profile, mode: mode}->getCmds),
                 image: Some(image),
                 needs: switch int.req {
                 | Some(needs) => needs
@@ -282,7 +282,7 @@ let getJob = (buildOrder, pkgInfos) => {
       ->Array.concat([
         Ok({
           name: pkg,
-          script: [],
+          script: None,
           image: None,
           needs: foundPkgs->Array.map(foundPkg =>
             switch (pkg->Js.String2.split("#"))[0] {
