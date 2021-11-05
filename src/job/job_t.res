@@ -1,7 +1,7 @@
 type t = {
   name: string,
   //version: string;
-  image: string,
+  image: option<string>,
   //tags: string[];
   script: array<string>,
   needs: array<string>
