@@ -5,18 +5,18 @@ let generate = (jobs: array<Job_t.t>) => {
   let _ =
     jobs
     ->Array.map(job => {
-      [
-        `${job.name}:`,
-        `  needs: [${job.needs->Array.joinWith(", ", a => a)}]`,
-        "  script:",
-      ]->Array.concat(
+      [`${job.name}:`, `  needs: [${job.needs->Array.joinWith(", ", a => a)}]`]
+      ->Array.concat(
         switch job.image {
         | Some(image) => [`  image: ${image}`]
         | None => []
         },
-      )->Array.concat(
+      )
+      ->Array.concat(
         switch job.script {
-        | Some(script) => [script->Array.map(l => `    - ${l}`)->Array.joinWith("\n", a => a)]
+        | Some(script) => [
+            "  script:",
+          ]->Array.concat(script->Array.map(l => `    - ${l}`))
         | None => []
         },
       )
