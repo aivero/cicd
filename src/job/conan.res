@@ -82,7 +82,7 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   | _ => []
   }
 
-  Array.concatMany([initCmds, cmds, [`conan remove --locks`, `conan remove * -f`]])
+  Array.concatMany([initCmds, cmds])
 }
 
 external toConanInfo: 'a => array<conanInfo> = "%identity"
