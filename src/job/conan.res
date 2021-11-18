@@ -53,7 +53,7 @@ let getRepo = (int: Instance.t) => {
   ->Path.join
   ->File.read
   ->Result.map(content =>
-    content->Js.String2.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_INTERNAL"
+    content->Js.String2.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_PUBLIC"
   )
 }
 
