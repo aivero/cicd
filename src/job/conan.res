@@ -45,7 +45,7 @@ let getArgs = (int: Instance.t) => {
   | _ => []
   }
 
-  Array.concatMany([args, sets, opts]) //->Array.joinWith(" ", str => str)
+  Array.concatMany([args, sets, opts])
 }
 
 let getRepo = (int: Instance.t) => {
@@ -67,14 +67,14 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   ]
 
   let repo = getRepo(int)
-  let args = getArgs(int)->Array.joinWith(" ", str => str)
+  let args = int->getArgs
   let cmds = switch (int.name, int.version, int.folder, repo) {
   | (Some(name), Some(version), Some(folder), Ok(repo)) => {
-      let createPkg = [`conan create ${args}${folder} ${name}/${version}@`]
-      let createDbg = [`conan create ${args}${folder} ${name}-dbg/${version}@`]
-      let uploadPkg = [`conan upload ${name}/${version}@ --all -c -r ${repo}`]
+      let createPkg = [["conan", "create", folder, `${name}/${version}@`]->Js.Array2.concat(args)->Array.joinWith(" ", str => str)]
+      let createDbg = [["conan", "create", folder, `${name}-dbg/${version}@`]->Js.Array2.concat(args)->Array.joinWith(" ", str => str)]
+      let uploadPkg = [["conan", "upload", `${name}/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(" ", str => str)]
       let uploadDbg = switch int.debugPkg {
-      | Some(true) => [`conan upload ${name}-dbg/${version}@ --all -c -r ${repo}`]
+      | Some(true) => [["conan", "upload", `${name}-dbg/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(" ", str => str)]
       | _ => []
       }
       Array.concatMany([createPkg, createDbg, uploadPkg, uploadDbg])
