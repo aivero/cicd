@@ -129,7 +129,7 @@ let conanInit = (zips: array<Instance.zip>) => {
   | (Some(url), Some(dir)) => (url, dir)
   | _ => ("", "")
   }
-  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])
+  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])->Task.sleep(1000)
   let exportPkgs = zips->Js.Array2.reduce((a, zip) => {
     switch (zip.int.name, zip.int.version, zip.int.folder) {
     | (Some(name), Some(version), Some(folder)) =>
