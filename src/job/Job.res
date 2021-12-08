@@ -29,13 +29,5 @@ let load = ints => {
   ints->Result.map(ints => {
     Task.all([Command.getJobs(ints), Conan.getJobs(ints)])
     ->Task.map(jobs => jobs->Flat.array->Result.map(Array.concatMany))
-    ->(b => b)
   })
-  //switch (Instance.zip(int), getMode(int)) {
-  //| (Ok(zip), #conan) => Conan.getJobs(zip)
-  //| (Ok(zip), #command) => Command.getJobs(zip)
-  //| JobMode.Docker => getConanDockerJobs(conf)
-  //| JobMode.ConanInstallTarball => getConanDockerJobs(conf)
-  //| JobMode.ConanInstallScript => getConanDockerJobs(conf)
-  //}
 }

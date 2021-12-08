@@ -70,11 +70,34 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   let args = int->getArgs
   let cmds = switch (int.name, int.version, int.folder, repo) {
   | (Some(name), Some(version), Some(folder), Ok(repo)) => {
-      let createPkg = [["conan", "create", folder, `${name}/${version}@`]->Js.Array2.concat(args)->Array.joinWith(" ", str => str)]
-      let createDbg = [["conan", "create", folder, `${name}-dbg/${version}@`]->Js.Array2.concat(args)->Array.joinWith(" ", str => str)]
-      let uploadPkg = [["conan", "upload", `${name}/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(" ", str => str)]
+      let createPkg = [
+        ["conan", "create", folder, `${name}/${version}@`]
+        ->Js.Array2.concat(args)
+        ->Array.joinWith(" ", str => str),
+      ]
+      let createDbg = [
+        ["conan", "create", folder, `${name}-dbg/${version}@`]
+        ->Js.Array2.concat(args)
+        ->Array.joinWith(" ", str => str),
+      ]
+      let uploadPkg = [
+        ["conan", "upload", `${name}/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(
+          " ",
+          str => str,
+        ),
+      ]
       let uploadDbg = switch int.debugPkg {
-      | Some(true) => [["conan", "upload", `${name}-dbg/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(" ", str => str)]
+      | Some(true) => [
+          [
+            "conan",
+            "upload",
+            `${name}-dbg/${version}@`,
+            "--all",
+            "-c",
+            "-r",
+            repo,
+          ]->Array.joinWith(" ", str => str),
+        ]
       | _ => []
       }
       Array.concatMany([createPkg, createDbg, uploadPkg, uploadDbg])
@@ -97,26 +120,21 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
           int->getArgs,
           [`${name}/${version}@`],
         ]),
-      )->Task.map(res => {
-        res->Result.flatMap(_ =>
-          switch File.read(`${name}-${version}-${hash}.json`) {
-          | Ok(output) =>
-            output
-            ->Js.Json.parseExn
-            ->toConanInfo
-            ->Js.Array2.find(e => e.reference == `${name}/${version}`)
-            ->(
-              find =>
-                switch find {
-                | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode, hash: hash})
-                | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
-                }
-            )
-
-          | Error(e) => Error(e)
-          }
+      )->TaskResult.flatMap(_ =>
+        File.read(`${name}-${version}-${hash}.json`)->Result.flatMap(output =>
+          output
+          ->Js.Json.parseExn
+          ->toConanInfo
+          ->Js.Array2.find(e => e.reference == `${name}/${version}`)
+          ->(
+            find =>
+              switch find {
+              | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode, hash: hash})
+              | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
+              }
+          )
         )
-      })
+      )
     }
   | _ => Error("Name or version not defined")->Task.resolve
   }
@@ -139,101 +157,61 @@ let conanInit = (zips: array<Instance.zip>) => {
     | _ => a
     }
   }, [])
-  config->Task.flatMap(config =>
-    switch config {
-    | Ok(_) =>
-      exportPkgs
-      ->Array.map(((pkg, folder)) => {
-        Proc.run(["conan", "export", folder, pkg])
-      })
-      ->Task.all
-      ->Task.map(Flat.array)
-    | Error(error) => Error(error)->Task.resolve
-    }
+  config->TaskResult.map(_ =>
+    exportPkgs
+    ->Array.map(((pkg, folder)) => {
+      Proc.run(["conan", "export", folder, pkg])
+    })
+    ->Task.all
+    ->Task.map(Flat.array)
   )
 }
 
 let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   pkgInfos
-  ->Task.map(res => {
-    res->Result.map(pkgInfos =>
-      pkgInfos
-      ->Array.map(pkgInfo => {
-        switch (pkgInfo.int.name, pkgInfo.int.version) {
-        | (Some(name), Some(version)) =>
-          Proc.run(
-            [
-              "conan",
-              "lock",
-              "create",
-              `--ref=${name}/${version}`,
-              `--lockfile-out=${name}-${version}-${Hash.hash(pkgInfo)}.lock`,
-              `-pr=${pkgInfo.profile}`,
-            ]->Array.concat(pkgInfo.int->getArgs),
-          )->Task.map(output =>
-            switch output {
-            | Ok(_) => Ok(pkgInfo)
-            | Error(e) => Error(e)
-            }
-          )
-        | _ => Error("This should not happen")->Task.resolve
-        }
-      })
-      ->Task.all
-      ->Task.map(Flat.array)
-    )
-  })
-  ->Flat.task
-  ->Task.map(res => {
-    res->Result.map(pkgInfos => {
-      let locks = pkgInfos->Array.map(pkgInfo => {
-        switch (pkgInfo.int.name, pkgInfo.int.version) {
-        | (Some(name), Some(version)) => `${name}-${version}-${Hash.hash(pkgInfo)}.lock`
-        | _ => ""
-        }
-      })
-      locks->Js.Console.log
-      locks->Array.length > 0
-        ? Proc.run(
-            ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
-          )->Task.map(output =>
-            switch output {
-            | Ok(_) => Ok(pkgInfos)
-            | Error(e) => Error(e)
-            }
-          )
-        : Ok(pkgInfos)->Task.resolve
-    })
-  })
-  ->Flat.task
-  ->Task.map(res => {
-    res->Result.map(_ => {
-      File.exists("lock.bundle")
-        ? Proc.run([
+  ->TaskResult.map(pkgInfos => {
+    pkgInfos
+    ->Array.map(pkgInfo => {
+      switch (pkgInfo.int.name, pkgInfo.int.version) {
+      | (Some(name), Some(version)) =>
+        Proc.run(
+          [
             "conan",
             "lock",
-            "bundle",
-            "build-order",
-            "lock.bundle",
-            "--json=build_order.json",
-          ])->Task.map(output =>
-            switch output {
-            | Ok(_) => res
-            | Error(e) => Error(e)
-            }
-          )
-        : res->Task.resolve
+            "create",
+            `--ref=${name}/${version}`,
+            `--lockfile-out=${name}-${version}-${Hash.hash(pkgInfo)}.lock`,
+            `-pr=${pkgInfo.profile}`,
+          ]->Array.concat(pkgInfo.int->getArgs),
+        )->TaskResult.map(_ => pkgInfo)
+      | _ => Error("This should not happen")->Task.resolve
+      }
     })
+    ->Task.all
+    ->Task.map(Flat.array)
   })
   ->Flat.task
-  ->Task.map(res => {
-    res->Result.flatMap(_ => {
-      File.exists("build_order.json")
-        ? File.read("build_order.json")->Result.map(content =>
-            content->Js.Json.parseExn->toLockfile
-          )
-        : Ok([])
+  ->TaskResult.map(pkgInfos => {
+    let locks = pkgInfos->Array.map(pkgInfo => {
+      switch (pkgInfo.int.name, pkgInfo.int.version) {
+      | (Some(name), Some(version)) => `${name}-${version}-${Hash.hash(pkgInfo)}.lock`
+      | _ => ""
+      }
     })
+    locks->Js.Console.log
+    locks->Array.length > 0
+      ? Proc.run(
+          ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
+        )->TaskResult.map(_ => pkgInfos)
+      : Ok(pkgInfos)->Task.resolve
+  })
+  ->Flat.task
+  ->TaskResult.map(_ => {
+    Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
+  })
+  ->Flat.task
+  ->TaskResult.flatMap(_ => {
+    File.read("build_order.json")->Result.map(content => content->Js.Json.parseExn->toLockfile)
   })
 }
 
@@ -306,12 +284,8 @@ let getJobs = (zips: array<Instance.zip>) => {
   let pkgInfos =
     zips
     ->conanInit
-    ->Task.flatMap(exportPkgs =>
-      switch exportPkgs {
-      | Ok(_) => zips->Array.map(getInfo)->Task.all->Task.map(Flat.array)
-      | Error(error) => Error(error)->Task.resolve
-      }
-    )
+    ->TaskResult.map(_ => zips->Array.map(getInfo)->Task.all->Task.map(Flat.array))
+    ->Flat.task
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
     switch (pkgInfos, lockfile) {

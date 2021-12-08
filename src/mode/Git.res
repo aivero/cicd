@@ -10,18 +10,12 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 
 let handleConfigChange = confPath => {
   let intsNew =
-    Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(conf =>
-      switch (conf) {
-      | Ok(conf) => conf->Config.load(confPath)->Flat.array
-      | Error(conf) => Error(conf)
-      }
+    Proc.run(["git", "show", `HEAD:${confPath}`])->TaskResult.flatMap(conf =>
+      conf->Config.load(confPath)->Flat.array
     )
   let intsOld =
-    Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(conf =>
-      switch (conf) {
-      | Ok(conf) => conf->Config.load(confPath)->Flat.array
-      | Error(conf) => Error(conf)
-      }
+    Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.flatMap(conf =>
+      conf->Config.load(confPath)->Flat.array
     )
   let filesOld = Proc.run(["git", "ls-tree", "-r", lastRev])
 
@@ -62,8 +56,7 @@ let handleChange = file => {
 
 let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
-  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->Task.map(res =>
-    res->Result.map(output => {
+  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->TaskResult.map(output => {
       output->Js.String2.trim
       ->Js.String2.split("\n")
       ->Js.Array2.filter(File.exists)
@@ -71,8 +64,6 @@ let findInts = () => {
         a->Array.concat(file->handleChange)
       }, [])
       ->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
-    })
-    //->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
-  )
+  })
   ->Flat.task
 }
