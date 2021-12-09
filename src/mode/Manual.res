@@ -21,9 +21,8 @@ let findInts = () => {
   | _ => ["", ""]
   }
 
-  Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->Task.map(e =>
+  Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->TaskResult.flatMap(e =>
     e
-    ->Result.getExn
     ->Js.String2.trim
     ->Js.String2.split("\n")
     ->Array.map(Config.loadFile)

@@ -1,3 +1,5 @@
+open Job_t
+
 let getJobs = (zips: array<Instance.zip>) => {
   zips->Array.map(zip => {
     let int = zip.int
@@ -15,24 +17,23 @@ let getJobs = (zips: array<Instance.zip>) => {
       ])
     | _ => []
     }
-    switch (int.cmds, zip->Detect.getImage) {
-    | (Some(cmds), Ok(image)) =>
-      (
-        {
-          Ok({
-            name: "foo",
-            script: Some(cmds),
-            image: Some(image),
-            needs: switch zip.int.req {
-            | Some(needs) => needs
-            | None => []
-            },
-          })
-        }: result<Job_t.t, string>
-      )
-    | (_, Error(err)) => Error(err)
-    | (None, _) => Error("No commands specified")
-    }
+    zip
+    ->Detect.getImage
+    ->Result.map(image =>
+      switch int.cmds {
+      | Some(cmds) =>
+        Ok({
+          name: "foo",
+          script: Some(cmds),
+          image: Some(image),
+          needs: switch zip.int.req {
+          | Some(needs) => needs
+          | None => []
+          },
+        })
+      | None => Error("No commands specified")
+      }
+    )
   })
 
   /*

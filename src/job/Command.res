@@ -18,7 +18,7 @@ let getJobs = (zips: array<Instance.zip>) => {
           | None => []
           },
         })
-      | (_, _) => Error(`${zip.int.name->Option.getExn}: name or cmds not specified`)
+      | _ => Error(`${zip.int.name->Option.getExn}: name or cmds not specified`)
       }
     )
   })->Flat.array
