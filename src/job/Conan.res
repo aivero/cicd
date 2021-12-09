@@ -15,6 +15,8 @@ type pkgInfo = {
   hash: string,
 }
 
+let procs = 32
+
 let getArgs = (int: Instance.t) => {
   let args = switch Env.get("args") {
   | Some(args) => args->Js.String2.split(" ")
@@ -142,12 +144,12 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
 
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
-let conanInit = (zips: array<Instance.zip>) => {
+let init = (zips: array<Instance.zip>) => {
   let (url, dir) = switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR")) {
   | (Some(url), Some(dir)) => (url, dir)
   | _ => ("", "")
   }
-  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])->Task.sleep(1000)
+  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])
   let exportPkgs = zips->Js.Array2.reduce((a, zip) => {
     switch (zip.int.name, zip.int.version, zip.int.folder) {
     | (Some(name), Some(version), Some(folder)) =>
@@ -159,19 +161,21 @@ let conanInit = (zips: array<Instance.zip>) => {
   }, [])
   config->TaskResult.map(_ =>
     exportPkgs
-    ->Array.map(((pkg, folder)) => {
+    ->Array.map(((pkg, folder), ()) => {
       Proc.run(["conan", "export", folder, pkg])
     })
-    ->Task.all
+    ->Task.pool(32)
+    ->Task.flatMap(Task.all)
     ->Task.map(Flat.array)
   )
+  ->Flat.task
 }
 
 let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   pkgInfos
   ->TaskResult.map(pkgInfos => {
     pkgInfos
-    ->Array.map(pkgInfo => {
+    ->Array.map((pkgInfo, ()) => {
       switch (pkgInfo.int.name, pkgInfo.int.version) {
       | (Some(name), Some(version)) =>
         Proc.run(
@@ -187,7 +191,8 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
       | _ => Error("This should not happen")->Task.resolve
       }
     })
-    ->Task.all
+    ->Task.pool(32)
+    ->Task.flatMap(Task.all)
     ->Task.map(Flat.array)
   })
   ->Flat.task
@@ -283,8 +288,14 @@ let getJobs = (zips: array<Instance.zip>) => {
   let zips = zips->Js.Array2.filter(zip => zip.mode == #conan)
   let pkgInfos =
     zips
-    ->conanInit
-    ->TaskResult.map(_ => zips->Array.map(getInfo)->Task.all->Task.map(Flat.array))
+    ->init
+    ->TaskResult.map(_ =>
+      zips
+      ->Array.map((zip, ()) => zip->getInfo)
+      ->Task.pool(32)
+      ->Task.flatMap(Task.all)
+      ->Task.map(Flat.array)
+    )
     ->Flat.task
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
