@@ -2,19 +2,19 @@ let getImage = ({int, profile}: Instance.zip) => {
   // Base Conan image
   let base = "aivero/conan:"
 
-  let profile = profile->Js.String2.split("-")->List.fromArray;
-  let os = switch profile {
+  let triple = profile->Js.String2.split("-")->List.fromArray;
+  let os = switch triple {
   | list{_, "musl", ..._ } => Ok("alpine")
   | list{"linux", ..._ } | list{"wasi", ..._} => Ok("bionic")
   | list{"windows", ..._ }  => Ok("windows")
   | list{"macos", ..._ } => Ok("macos")
-  | _ => Error("Could not detect image os")
+  | _ => Error(`Could not detect image os for profile: ${profile}`)
   }
 
-  let arch = switch profile {
-  | list{_, "x86_64"} | list{_, "wasm"} => Ok("x86_64")
-  | list{_, "armv8"} => Ok("armv8")
-  | _ => Error("Could not detect image arch")
+  let arch = switch triple {
+  | list{_, "x86_64", ..._ } | list{_, "wasm", ..._ } => Ok("x86_64")
+  | list{_, "armv8", ..._ } => Ok("armv8")
+  | _ => Error(`Could not detect image arch for profile: ${profile}`)
   }
 
   let end = switch int.bootstrap {
@@ -35,7 +35,7 @@ let getRunnerTags = (profile) => {
   switch arch {
   | "x86_64" | "wasm" => Ok(["X64", "aws"])
   | "armv8" => Ok(["ARM64", "aws"])
-  | _ => Error("Could detect runner tags for profile")
+  | _ => Error(`Could detect runner tags for profile: ${profile}`)
   }
 };
 
