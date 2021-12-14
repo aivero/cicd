@@ -2,7 +2,7 @@ generate-config:
   image: aivero/conan:bionic-x86_64
   stage: build
   script:
-    - deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/generate_config.js
+    - deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/GenerateConfig.js
   artifacts:
     paths:
       - generated-config*.yml
