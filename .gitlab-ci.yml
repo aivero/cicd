@@ -11,5 +11,5 @@ child-pipeline:
   stage: test
   trigger:
     include:
-      - artifact: generated-config*.yml
+      - artifact: generated-config.yml
         job: generate-config
