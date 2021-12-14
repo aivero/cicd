@@ -16,21 +16,3 @@ child-pipeline:
         job: generate-config
       - artifact: generated-config-100.yml
         job: generate-config
-      - artifact: generated-config-200.yml
-        job: generate-config
-      - artifact: generated-config-300.yml
-        job: generate-config
-      - artifact: generated-config-400.yml
-        job: generate-config
-      - artifact: generated-config-500.yml
-        job: generate-config
-      - artifact: generated-config-600.yml
-        job: generate-config
-      - artifact: generated-config-700.yml
-        job: generate-config
-      - artifact: generated-config-800.yml
-        job: generate-config
-      - artifact: generated-config-900.yml
-        job: generate-config
-      - artifact: generated-config-1000.yml
-        job: generate-config
