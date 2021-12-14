@@ -10,9 +10,8 @@ child-pipeline:
   stage: test
   trigger:
     include:
-      - artifact: generated-config.yml
-        job: generate-config
-      - artifact: generated-config-0.yml
-        job: generate-config
-      - artifact: generated-config-100.yml
+      - artifact: 
+        - generated-config.yml
+        - generated-config-0.yml
+        - generated-config-100.yml
         job: generate-config
