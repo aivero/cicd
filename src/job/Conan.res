@@ -16,6 +16,8 @@ type pkgInfo = {
 }
 
 let procs = 32
+let hashLength = 5
+let hashN = Hash.hashN(_, hashLength)
 
 let getArgs = (int: Instance.t) => {
   let args = switch Env.get("args") {
@@ -115,7 +117,7 @@ external toConanInfo: 'a => array<conanInfo> = "%identity"
 let getInfo = ({int, profile, mode}: Instance.zip) => {
   switch (int.name, int.version) {
   | (Some(name), Some(version)) => {
-      let hash = Hash.hash({int: int, profile: profile, mode: mode})
+      let hash = hashN({int: int, profile: profile, mode: mode})
       Proc.run(
         Array.concatMany([
           ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
@@ -182,7 +184,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
             "lock",
             "create",
             `--ref=${name}/${version}`,
-            `--lockfile-out=${name}-${version}-${Hash.hash(pkgInfo)}.lock`,
+            `--lockfile-out=${name}-${version}-${hashN(pkgInfo)}.lock`,
             `-pr=${pkgInfo.profile}`,
           ]->Array.concat(pkgInfo.int->getArgs),
         )->TaskResult.map(_ => pkgInfo)
@@ -195,7 +197,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   ->TaskResult.map(pkgInfos => {
     let locks = pkgInfos->Array.map(pkgInfo => {
       switch (pkgInfo.int.name, pkgInfo.int.version) {
-      | (Some(name), Some(version)) => `${name}-${version}-${Hash.hash(pkgInfo)}.lock`
+      | (Some(name), Some(version)) => `${name}-${version}-${hashN(pkgInfo)}.lock`
       | _ => ""
       }
     })

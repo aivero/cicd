@@ -23,34 +23,14 @@ let generateJob = (job: Job_t.t) => {
 
 let generate = (jobs: array<Job_t.t>) => {
   let encode = Encoder.new()->Encoder.encode
-  let chunkSize = 100
-  let confFiles = 10
   let jobs =
     jobs->Array.length > 0
       ? jobs
       : [{name: "empty", needs: [], script: Some(["echo"]), image: None}]
 
-  let chunks =
-    jobs
-    ->chunk(chunkSize)
-    ->Array.map(chunk => {
-      chunk->Array.map(generateJob)
-    })
-
-  // Generate empty conf files
-  Range.forEach(0, confFiles, (i) => {
-    let name = `generated-config-${(i * chunkSize)->Int.toString}.yml`
-    ""->encode->File.write(name)
-  })
-
-  let includeLines = chunks->Array.mapWithIndex((i, chunk) => {
-    let name = `generated-config-${(i * chunkSize)->Int.toString}.yml`
-    chunk->Array.concatMany->Array.joinWith("\n", a => a)->encode->File.write(name)
-    `- '${name}'`
-  })
-
-  ["include:"]
-  ->Array.concat(includeLines)
+  jobs
+  ->Array.map(generateJob)
+  ->Array.concatMany
   ->Array.joinWith("\n", a => a)
   ->encode
   ->File.write("generated-config.yml")
