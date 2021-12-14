@@ -5,11 +5,32 @@ generate-config:
     - deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/GenerateConfig.js
   artifacts:
     paths:
-      - generated-config*.yml
-
+      - generated-config*.yml 
 child-pipeline:
   stage: test
   trigger:
     include:
       - artifact: generated-config.yml
+        job: generate-config
+      - artifact: generated-config-0.yml
+        job: generate-config
+      - artifact: generated-config-100.yml
+        job: generate-config
+      - artifact: generated-config-200.yml
+        job: generate-config
+      - artifact: generated-config-300.yml
+        job: generate-config
+      - artifact: generated-config-400.yml
+        job: generate-config
+      - artifact: generated-config-500.yml
+        job: generate-config
+      - artifact: generated-config-600.yml
+        job: generate-config
+      - artifact: generated-config-700.yml
+        job: generate-config
+      - artifact: generated-config-800.yml
+        job: generate-config
+      - artifact: generated-config-900.yml
+        job: generate-config
+      - artifact: generated-config-1000.yml
         job: generate-config

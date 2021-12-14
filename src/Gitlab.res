@@ -24,6 +24,7 @@ let generateJob = (job: Job_t.t) => {
 let generate = (jobs: array<Job_t.t>) => {
   let encode = Encoder.new()->Encoder.encode
   let chunkSize = 100
+  let confFiles = 10
   let jobs =
     jobs->Array.length > 0
       ? jobs
@@ -35,6 +36,12 @@ let generate = (jobs: array<Job_t.t>) => {
     ->Array.map(chunk => {
       chunk->Array.map(generateJob)
     })
+
+  // Generate empty conf files
+  Range.forEach(0, confFiles, (i) => {
+    let name = `generated-config-${(i * chunkSize)->Int.toString}.yml`
+    ""->encode->File.write(name)
+  })
 
   let includeLines = chunks->Array.mapWithIndex((i, chunk) => {
     let name = `generated-config-${(i * chunkSize)->Int.toString}.yml`
