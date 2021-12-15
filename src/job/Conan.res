@@ -1,4 +1,5 @@
 open Instance
+open Job_t
 
 @send external toString: 'a => string = "toString"
 
@@ -161,7 +162,8 @@ let init = (zips: array<Instance.zip>) => {
     | _ => a
     }
   }, [])
-  config->TaskResult.map(_ =>
+  config
+  ->TaskResult.map(_ =>
     exportPkgs
     ->Array.map(((pkg, folder), ()) => {
       Proc.run(["conan", "export", folder, pkg])
@@ -223,54 +225,43 @@ let getJob = (buildOrder, pkgInfos) => {
   ->Array.mapWithIndex((index, group) => {
     group
     ->Array.map(pkg => {
-      let revision = (pkg->Js.String2.split("#"))[1]
-      let foundPkgs = pkgInfos->Js.Array2.filter(e => {
-        switch revision {
-        | Some(revision) => revision == e.info.revision
-        | None => false
-        }
-      })
+      let [pkg, revision] = pkg->Js.String2.split("#")
+      let foundPkgs = pkgInfos->Js.Array2.filter(e => revision == e.info.revision)
       foundPkgs
       ->Array.map(foundPkg => {
         let {int, profile, mode, hash} = foundPkg
-        switch (
-          (pkg->Js.String2.split("#"))[0],
-          {int: int, profile: profile, mode: mode}->Detect.getImage,
-        ) {
-        | (Some(pkg), Ok(image)) =>
-          Ok(
-            (
-              {
-                name: `${pkg}${hash}`,
-                script: Some({int: int, profile: profile, mode: mode}->getCmds),
-                image: Some(image),
-                needs: switch int.req {
-                | Some(needs) => needs
+
+        {int: int, profile: profile, mode: mode}
+        ->Detect.getImage
+        ->Result.flatMap(image => Ok(
+          (
+            {
+              name: `${pkg}${hash}`,
+              script: Some({int: int, profile: profile, mode: mode}->getCmds),
+              image: Some(image),
+              needs: switch int.req {
+              | Some(needs) => needs
+              | None => []
+              }->Array.concat(
+                switch buildOrder[index - 1] {
+                | Some(group) =>
+                  group->Array.map(pkg => {
+                    let [pkg, ver] = pkg->Js.String2.split("#")
+                    pkg ++ ver->String.sub(0, hashLength)
+                  })
                 | None => []
-                }->Array.concat(
-                  switch buildOrder[index - 1] {
-                  | Some(group) => group
-                  | None => []
-                  },
-                ),
-              }: Job_t.t
-            ),
-          )
-        | (_, Error(err)) => Error(err)
-        | (None, _) => Error(`Invalid package: ${pkg}`)
-        }
+                },
+              ),
+            }: Job_t.t
+          ),
+        ))
       })
       ->Array.concat([
         Ok({
           name: pkg,
           script: Some(["echo"]),
           image: None,
-          needs: foundPkgs->Array.map(foundPkg =>
-            switch (pkg->Js.String2.split("#"))[0] {
-            | Some(pkg) => `${pkg}${foundPkg.hash}`
-            | _ => `Invalid package: ${pkg}`
-            }
-          ),
+          needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
         }),
       ])
       ->Flat.array
@@ -287,11 +278,7 @@ let getJobs = (zips: array<Instance.zip>) => {
   let pkgInfos =
     zips
     ->init
-    ->TaskResult.map(_ =>
-      zips
-      ->Array.map((zip, ()) => zip->getInfo)
-      ->TaskResult.pool(32)
-    )
+    ->TaskResult.map(_ => zips->Array.map((zip, ()) => zip->getInfo)->TaskResult.pool(32))
     ->Flat.task
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
