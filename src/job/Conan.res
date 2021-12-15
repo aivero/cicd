@@ -258,7 +258,7 @@ let getJob = (buildOrder, pkgInfos) => {
                 | Some(group) =>
                   group->Array.map(pkg => {
                     let [pkg, ver] = pkg->Js.String2.split("#")
-                    pkg ++ ver->String.sub(0, hashLength)
+                    pkg ++ "#" ++ ver->String.sub(0, hashLength)
                   })
                 | None => []
                 },
@@ -269,7 +269,7 @@ let getJob = (buildOrder, pkgInfos) => {
       })
       ->Array.concat([
         Ok({
-          name: pkg,
+          name: pkg ++ "#" ++ revision->String.sub(0, hashLength),
           script: Some(["echo"]),
           image: None,
           needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
