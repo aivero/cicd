@@ -212,11 +212,22 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   })
   ->Flat.task
   ->TaskResult.map(_ => {
-    Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
+    File.exists("lock.bundle")
+      ? Proc.run([
+          "conan",
+          "lock",
+          "bundle",
+          "build-order",
+          "lock.bundle",
+          "--json=build_order.json",
+        ])
+      : Ok("")->Task.resolve
   })
   ->Flat.task
   ->TaskResult.flatMap(_ => {
-    File.read("build_order.json")->Result.map(content => content->Js.Json.parseExn->toLockfile)
+    File.exists("build_order.json")
+      ? File.read("build_order.json")->Result.map(content => content->Js.Json.parseExn->toLockfile)
+      : Ok([])
   })
 }
 
