@@ -206,22 +206,9 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
     locks->Js.Console.log
     locks->Array.length > 0
       ? Proc.run(
-          ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
+          ["conan", "lock", "build-order", "--json=build_order.json"]->Array.concat(locks),
         )->TaskResult.map(_ => pkgInfos)
       : Ok(pkgInfos)->Task.resolve
-  })
-  ->Flat.task
-  ->TaskResult.map(_ => {
-    File.exists("lock.bundle")
-      ? Proc.run([
-          "conan",
-          "lock",
-          "bundle",
-          "build-order",
-          "lock.bundle",
-          "--json=build_order.json",
-        ])
-      : Ok("")->Task.resolve
   })
   ->Flat.task
   ->TaskResult.flatMap(_ => {
