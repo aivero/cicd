@@ -1,15 +1,15 @@
 @send external toString: 'a => string = "toString"
 
 let main = () => {
-  let _ = Mode.load()->Task.flatMap(res =>
+  let _ = Mode.load()->Task.map(res =>
     switch res {
     | Ok(val) => {
         val->Gitlab.generate
-        "Ok"->Js.Console.log->Task.resolve
+        "Ok"->Js.Console.log
       }
     | Error(e) => {
       `Error: ${e->toString}`->Js.Console.log
-      Proc.exit(1)->Task.resolve
+      Proc.exit(1)
     } 
     }
   )
