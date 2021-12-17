@@ -14,7 +14,6 @@ let rec find = dir => {
 external toConfig: Yaml.t => t = "%identity"
 
 let load = (content, path) => {
-  //content->Yaml.parse->toConfig->Option.map(conf => conf->Array.map(path->Path.dirname->Instance.create))
   switch content->Yaml.parse->toConfig {
   | Some(conf) => conf->Array.map(path->Path.dirname->Instance.create)
   | None => []

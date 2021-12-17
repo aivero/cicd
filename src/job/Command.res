@@ -13,6 +13,8 @@ let getJobs = (zips: array<Instance.zip>) => {
           name: `${name}-${zip.profile}`,
           script: Some(cmds),
           image: Some(image),
+          variables: None,
+          extends: None,
           needs: switch zip.int.req {
           | Some(needs) => needs->Array.map(need => `${need}-${zip.profile}`)
           | None => []

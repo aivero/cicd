@@ -26,6 +26,8 @@ let getJobs = (zips: array<Instance.zip>) => {
           name: "foo",
           script: Some(cmds),
           image: Some(image),
+          extends: None,
+          variables: None,
           needs: switch zip.int.req {
           | Some(needs) => needs
           | None => []

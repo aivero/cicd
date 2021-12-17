@@ -62,6 +62,22 @@ let getRepo = (int: Instance.t) => {
   )
 }
 
+let getVariables = ({int, profile}: Instance.zip) => {
+  int
+  ->getRepo
+  ->Result.map(repo =>
+    switch (int.name, int.version, int.folder) {
+    | (Some(name), Some(version), Some(folder)) => [
+        ("PKG", `${name}/${version}`),
+        ("PATH", folder),
+        ("REPO", repo),
+        ("PROFILE", profile),
+      ]->Array.concat(int->getArgs->Array.length > 0 ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))] : [])
+    | _ => []
+    }
+  )
+}
+
 let getCmds = ({int, profile}: Instance.zip): array<string> => {
   let initCmds = [
     `conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR`,
@@ -242,37 +258,40 @@ let getJob = (buildOrder, pkgInfos) => {
       foundPkgs
       ->Array.map(foundPkg => {
         let {int, profile, mode, hash} = foundPkg
-
         {int: int, profile: profile, mode: mode}
-        ->Detect.getImage
-        ->Result.flatMap(image => Ok(
-          (
-            {
-              name: `${pkg}${hash}`,
-              script: Some({int: int, profile: profile, mode: mode}->getCmds),
-              image: Some(image),
-              needs: switch int.req {
-              | Some(needs) => needs
+        ->Detect.getExtends
+        ->Result.flatMap(extends => {
+          {int: int, profile: profile, mode: mode}
+          ->getVariables
+          ->Result.map(variables => {
+            name: `${pkg}${hash}`,
+            script: None,
+            image: None,
+            variables: Some(variables->Js.Dict.fromArray),
+            extends: Some(extends),
+            needs: switch int.req {
+            | Some(needs) => needs
+            | None => []
+            }->Array.concat(
+              switch buildOrder[index - 1] {
+              | Some(group) =>
+                group->Array.map(pkg => {
+                  let [pkg, ver] = pkg->Js.String2.split("#")
+                  pkg ++ "#" ++ ver->String.sub(0, hashLength)
+                })
               | None => []
-              }->Array.concat(
-                switch buildOrder[index - 1] {
-                | Some(group) =>
-                  group->Array.map(pkg => {
-                    let [pkg, ver] = pkg->Js.String2.split("#")
-                    pkg ++ "#" ++ ver->String.sub(0, hashLength)
-                  })
-                | None => []
-                },
-              ),
-            }: Job_t.t
-          ),
-        ))
+              },
+            ),
+          })
+        })
       })
       ->Array.concat([
         Ok({
           name: pkg ++ "#" ++ revision->String.sub(0, hashLength),
           script: Some(["echo"]),
           image: None,
+          variables: None,
+          extends: None,
           needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
         }),
       ])

@@ -29,6 +29,25 @@ let getImage = ({int, profile}: Instance.zip) => {
   }
 }
 
+let getExtends = ({int, profile}: Instance.zip) => {
+  let base = ".conan"
+
+  let triple = profile->Js.String2.split("-")->List.fromArray;
+
+  let arch = switch triple {
+  | list{_, "x86_64", ..._ } | list{_, "wasm", ..._ } => Ok("x86_64")
+  | list{_, "armv8", ..._ } => Ok("armv8")
+  | _ => Error(`Could not detect image arch for profile: ${profile}`)
+  }
+
+  let end = switch int.bootstrap {
+  | Some(true) => "-bootstrap"
+  | _ => ""
+  }
+
+  arch->Result.map(arch => `${base}-${arch}${end}`)
+}
+
 
 let getRunnerTags = (profile) => {
   let [_, arch] = profile->Js.String2.split("-")
