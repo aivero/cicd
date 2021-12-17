@@ -30,18 +30,7 @@ let generateJob = (job: Job_t.t) => {
 }
 
 let base = `
-.conan-x86_64:
-  image: aivero/conan:bionic-x86_64
-  script:
-    - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
-    - conan config set general.default_profile=$PROFILE
-    - conan create $PATH $PKG@ $ARGS
-    - conan upload $PKG@ --all -c -r $CONAN_REPO_PUBLIC
-.conan-armv8:
-  image: aivero/conan:bionic-armv8
+.conan:
   script:
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
@@ -49,12 +38,18 @@ let base = `
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
     - conan config set general.default_profile=$PROFILE
     - conan create $FOLDER $PKG@ $ARGS
-    - conan upload $PKG@ --all -c -r $CONAN_REPO_PUBLIC
+    - conan upload $PKG@ --all -c -r $REPO
+.conan-x86_64:
+  extends: .conan
+  image: aivero/conan:bionic-x86_64
+.conan-armv8:
+  extends: .conan
+  image: aivero/conan:bionic-armv8
 .conan-x86_64-bootstrap:
-  extends: .conan-x86_64
+  extends: .conan
   image: aivero/conan:bionic-x86_64-bootstrap
 .conan-armv8-bootstrap:
-  extends: .conan-armv8 
+  extends: .conan
   image: aivero/conan:bionic-armv8-bootstrap
 `
 
