@@ -41,15 +41,17 @@ let base = `
     - conan upload $PKG@ --all -c -r $REPO
 .conan-x86_64:
   extends: .conan
+  tags: [x86_64]
   image: aivero/conan:bionic-x86_64
 .conan-armv8:
   extends: .conan
+  tags: [armv8]
   image: aivero/conan:bionic-armv8
 .conan-x86_64-bootstrap:
-  extends: .conan
+  extends: .conan-x86_64
   image: aivero/conan:bionic-x86_64-bootstrap
 .conan-armv8-bootstrap:
-  extends: .conan
+  extends: .conan-armv8
   image: aivero/conan:bionic-armv8-bootstrap
 `
 
