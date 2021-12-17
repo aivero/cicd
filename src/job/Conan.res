@@ -264,7 +264,7 @@ let getJob = (buildOrder, pkgInfos) => {
           {int: int, profile: profile, mode: mode}
           ->getVariables
           ->Result.map(variables => {
-            name: `${pkg}${hash}`,
+            name: `${int.name->Option.getExn}/${int.version->Option.getExn}@${hash}`,
             script: None,
             image: None,
             variables: Some(variables->Js.Dict.fromArray),
