@@ -69,7 +69,7 @@ let getVariables = ({int, profile}: Instance.zip) => {
     switch (int.name, int.version, int.folder) {
     | (Some(name), Some(version), Some(folder)) => [
         ("PKG", `${name}/${version}`),
-        ("PATH", folder),
+        ("FOLDER", folder),
         ("REPO", repo),
         ("PROFILE", profile),
       ]->Array.concat(int->getArgs->Array.length > 0 ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))] : [])
