@@ -254,7 +254,7 @@ let getJob = (buildOrder, pkgInfos) => {
     group
     ->Array.map(pkg => {
       let [pkg, revision] = pkg->Js.String2.split("#")
-      let foundPkgs = pkgInfos->Js.Array2.filter(e => revision == e.info.revision)
+      let foundPkgs = pkgInfos->Js.Array2.filter(e => revision == e.info.revision && pkg == e.info.reference ++ "@")
       foundPkgs
       ->Array.map(foundPkg => {
         let {int, profile, mode, hash} = foundPkg
