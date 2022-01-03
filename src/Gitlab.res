@@ -37,7 +37,7 @@ let base = `
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
     - conan config set general.default_profile=$PROFILE
-    - conan create $FOLDER $PKG@ $ARGS
+    - conan create -u $FOLDER $PKG@ $ARGS
     - conan upload $PKG@ --all -c -r $REPO
 .conan-x86_64:
   extends: .conan
