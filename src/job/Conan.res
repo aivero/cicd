@@ -92,7 +92,7 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
   let cmds = switch (int.name, int.version, int.folder, repo) {
   | (Some(name), Some(version), Some(folder), Ok(repo)) => {
       let createPkg = [
-        ["conan", "create", folder, `${name}/${version}@`]
+        ["conan", "create", "-u", folder, `${name}/${version}@`]
         ->Js.Array2.concat(args)
         ->Array.joinWith(" ", str => str),
       ]
