@@ -42,17 +42,17 @@ let base = `
 .conan-x86_64:
   extends: .conan
   tags: [x86_64]
-  image: aivero/conan:bionic-x86_64-gitlab
+  image: aivero/conan:focal-x86_64
 .conan-armv8:
   extends: .conan
   tags: [armv8]
-  image: aivero/conan:bionic-armv8-gitlab
+  image: aivero/conan:focal-armv8
 .conan-x86_64-bootstrap:
   extends: .conan-x86_64
-  image: aivero/conan:bionic-x86_64-bootstrap
+  image: aivero/conan:focal-x86_64-bootstrap
 .conan-armv8-bootstrap:
   extends: .conan-armv8
-  image: aivero/conan:bionic-armv8-bootstrap
+  image: aivero/conan:focal-armv8-bootstrap
 `
 
 let generate = (jobs: array<Job_t.t>) => {

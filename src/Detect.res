@@ -5,7 +5,7 @@ let getImage = ({int, profile}: Instance.zip) => {
   let triple = profile->Js.String2.split("-")->List.fromArray;
   let os = switch triple {
   | list{_, "musl", ..._ } => Ok("alpine")
-  | list{"linux", ..._ } | list{"wasi", ..._} => Ok("bionic")
+  | list{"linux", ..._ } | list{"wasi", ..._} => Ok("focal")
   | list{"windows", ..._ }  => Ok("windows")
   | list{"macos", ..._ } => Ok("macos")
   | _ => Error(`Could not detect image os for profile: ${profile}`)
