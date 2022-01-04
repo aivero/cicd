@@ -42,11 +42,11 @@ let base = `
 .conan-x86_64:
   extends: .conan
   tags: [x86_64]
-  image: aivero/conan:bionic-x86_64
+  image: aivero/conan:bionic-x86_64-gitlab
 .conan-armv8:
   extends: .conan
   tags: [armv8]
-  image: aivero/conan:bionic-armv8
+  image: aivero/conan:bionic-armv8-gitlab
 .conan-x86_64-bootstrap:
   extends: .conan-x86_64
   image: aivero/conan:bionic-x86_64-bootstrap
