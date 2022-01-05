@@ -47,9 +47,9 @@ let base = `
   artifacts:
     expire_in: 1 month
     paths:
-      - **/meson-logs/*-log.txt
-      - **/config.log
-      - **/CMakeFiles/CMake*.log
+      - /**/meson-logs/*-log.txt
+      - /**/config.log
+      - /**/CMakeFiles/CMake*.log
     when: always
 .conan-x86_64:
   extends: .conan
