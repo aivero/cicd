@@ -19,12 +19,11 @@ let run = cmd => {
   p
   ->status
   ->Task.flatMap(({code}) => {
-  	`Exit code: ${code-> Int.toString}`->Js.Console.log
 		let output = p->output
 		let stderrOutput = p->stderrOutput
     (code == 0 ? output : stderrOutput)->Task.map(output => {
       let decoded = Decoder.new()->Decoder.decode(output)
-      code == 0 ? Ok(decoded) : Error(decoded)
+      code == 0 ? Ok(decoded) : Error(`${decoded} (Exit code: ${code-> Int.toString})`)
     })
   })
 }
