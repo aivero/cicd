@@ -48,7 +48,7 @@ let handleFileChange = (confPath, filePath) => {
 let handleChange = file => {
   let conf = file->Path.dirname->Config.find
   switch conf {
-  | Some(conf) if conf->Path.basename == Config.name => [conf->handleConfigChange]
+  | Some(conf) if file->Path.basename == Config.name => [conf->handleConfigChange]
   | Some(conf) => [conf->handleFileChange(file)]
   | None => []
   }
