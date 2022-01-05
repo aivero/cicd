@@ -39,6 +39,18 @@ let base = `
     - conan config set general.default_profile=$PROFILE
     - conan create -u $FOLDER $PKG@ $ARGS
     - conan upload $PKG@ --all -c -r $REPO
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
+      - stuck_or_timeout_failure
+  artifacts:
+    expire_in: 1 month
+    paths:
+      - **/meson-logs/*-log.txt
+      - **/config.log
+      - **/CMakeFiles/CMake*.log
+    when: always
 .conan-x86_64:
   extends: .conan
   tags: [x86_64]
