@@ -47,11 +47,11 @@ let base = `
   artifacts:
     expire_in: 1 month
     paths:
-      - /root/.conan/data/$PKG/_/_/build/*/meson-logs/*-log.txt
-      - /root/.conan/data/$PKG/_/_/build/*/*/meson-logs/*-log.txt
-      - /root/.conan/data/$PKG/_/_/build/*/CMakeFiles/CMake*.log
-      - /root/.conan/data/$PKG/_/_/build/*/*/CMakeFiles/CMake*.log
-      - /root/.conan/data/$PKG/_/_/build/*/*/config.log
+      - .conan/data/$PKG/_/_/build/*/meson-logs/*-log.txt
+      - .conan/data/$PKG/_/_/build/*/*/meson-logs/*-log.txt
+      - .conan/data/$PKG/_/_/build/*/CMakeFiles/CMake*.log
+      - .conan/data/$PKG/_/_/build/*/*/CMakeFiles/CMake*.log
+      - .conan/data/$PKG/_/_/build/*/*/config.log
     when: always
 .conan-x86_64:
   extends: .conan
