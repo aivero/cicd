@@ -31,13 +31,16 @@ let generateJob = (job: Job_t.t) => {
 
 let base = `
 .conan:
+  variables:
+    CONAN_USER_HOME: "$CI_PROJECT_DIR"
+    CONAN_DATA_PATH: "$CI_PROJECT_DIR/conan_data"
   script:
-    - conan config set storage.path=$CI_BUILDS_DIR/conandata
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
+    - conan config set general.default_profile=$PROFILE
+    - conan config set storage.path=$CONAN_DATA_PATH
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
-    - conan config set general.default_profile=$PROFILE
     - conan create $FOLDER $PKG@ $ARGS
     - conan upload $PKG@ --all -c -r $REPO
   retry:
@@ -48,11 +51,11 @@ let base = `
   artifacts:
     expire_in: 1 month
     paths:
-      - "conandata/$PKG/_/_/build/*/meson-logs/*-log.txt"
-      - "conandata/$PKG/_/_/build/*/*/meson-logs/*-log.txt"
-      - "conandata/$PKG/_/_/build/*/CMakeFiles/CMake*.log"
-      - "conandata/$PKG/_/_/build/*/*/CMakeFiles/CMake*.log"
-      - "conandata/$PKG/_/_/build/*/*/config.log"
+      - "conan_data/$PKG/_/_/build/*/meson-logs/*-log.txt"
+      - "conan_data/$PKG/_/_/build/*/*/meson-logs/*-log.txt"
+      - "conan_data/$PKG/_/_/build/*/CMakeFiles/CMake*.log"
+      - "conan_data/$PKG/_/_/build/*/*/CMakeFiles/CMake*.log"
+      - "conan_data/$PKG/_/_/build/*/*/config.log"
     when: always
 .conan-x86_64:
   extends: .conan
