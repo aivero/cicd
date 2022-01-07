@@ -1,4 +1,5 @@
-# CICD
+# CICD (WIP)
+CICD tool for handling monorepos
 
 ```
 yarn # Install rescript
