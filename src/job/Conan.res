@@ -267,6 +267,7 @@ let getJob = (buildOrder, pkgInfos) => {
             name: `${int.name->Option.getExn}/${int.version->Option.getExn}@${hash}`,
             script: None,
             image: None,
+            tags: None,
             variables: Some(variables->Js.Dict.fromArray),
             extends: Some(extends),
             needs: switch int.req {
@@ -290,6 +291,7 @@ let getJob = (buildOrder, pkgInfos) => {
           name: pkg ++ "#" ++ revision->String.sub(0, hashLength),
           script: Some(["echo"]),
           image: None,
+          tags: Some(["x86_64"]),
           variables: None,
           extends: None,
           needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),

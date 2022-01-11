@@ -78,7 +78,7 @@ let generate = (jobs: array<Job_t.t>) => {
   let jobs =
     jobs->Array.length > 0
       ? jobs
-      : [{name: "empty", needs: [], script: Some(["echo"]), image: None, extends: None, variables: None}]
+      : [{name: "empty", needs: [], script: Some(["echo"]), image: None, tags: None, extends: None, variables: None}]
 
   jobs
   ->Array.map(generateJob)
