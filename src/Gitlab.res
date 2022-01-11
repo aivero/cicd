@@ -18,6 +18,10 @@ let generateJob = (job: Job_t.t) => {
     | Some(extends) => [`  extends: ${extends}`]
     | None => []
     },
+    switch job.tags {
+    | Some(tags) => [`${tags->Array.joinWith(", ", a => a)}]`]
+    | None => []
+    },
     switch job.variables {
     | Some(vars) => ["  variables:"]->Array.concat(vars->Js.Dict.entries->Array.map(((key, val)) => `    ${key}: ${val}`))
     | None => []
