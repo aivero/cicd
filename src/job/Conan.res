@@ -184,7 +184,7 @@ let init = (zips: array<Instance.zip>) => {
     ->Array.map(((pkg, folder), ()) => {
       Proc.run(["conan", "export", folder, pkg])
     })
-    ->TaskResult.pool(32)
+    ->TaskResult.pool(Sys.cpus)
   )
   ->Flat.task
 }
@@ -210,7 +210,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
       | _ => Error("This should not happen")->Task.resolve
       }
     })
-    ->TaskResult.pool(32)
+    ->TaskResult.pool(Sys.cpus)
   })
   ->Flat.task
   ->TaskResult.map(pkgInfos => {
@@ -311,7 +311,7 @@ let getJobs = (zips: array<Instance.zip>) => {
   let pkgInfos =
     zips
     ->init
-    ->TaskResult.map(_ => zips->Array.map((zip, ()) => zip->getInfo)->TaskResult.pool(32))
+    ->TaskResult.map(_ => zips->Array.map((zip, ()) => zip->getInfo)->TaskResult.pool(Sys.cpus))
     ->Flat.task
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
