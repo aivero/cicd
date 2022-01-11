@@ -202,7 +202,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
             "lock",
             "create",
             `--ref=${name}/${version}`,
-            `--build=${name}/${version}`,
+            `--build=missing`,
             `--lockfile-out=${name}-${version}-${hashN(pkgInfo)}.lock`,
             `-pr=${pkgInfo.profile}`,
           ]->Array.concat(pkgInfo.int->getArgs),
