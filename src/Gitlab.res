@@ -19,7 +19,7 @@ let generateJob = (job: Job_t.t) => {
     | None => []
     },
     switch job.tags {
-    | Some(tags) => [`${tags->Array.joinWith(", ", a => a)}]`]
+    | Some(tags) => [`  tags: [${tags->Array.joinWith(", ", a => a)}]`]
     | None => []
     },
     switch job.variables {
