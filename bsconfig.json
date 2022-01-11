@@ -6,6 +6,5 @@
     "subdirs": true
   },
   "package-specs": "es6-global",
-  "bs-dependencies": ["@ryyppy/rescript-promise"],
   "bsc-flags": ["-open Belt"] 
 }
