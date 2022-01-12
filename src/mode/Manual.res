@@ -14,11 +14,13 @@ let filter = (ints: array<Instance.t>, comps) => {
         !(
           comps->Js.Array2.some(comp =>
             switch comp[0] {
-            | Some(name) if name->Js.String2.startsWith("-") => name->Js.String2.sliceToEnd(~from=1) == cname
+            | Some(name) if name->Js.String2.startsWith("-") =>
+              name->Js.String2.sliceToEnd(~from=1) == cname
             | _ => false
             }
           )
         )
+
     | _ => false
     }
   })
@@ -27,7 +29,10 @@ let filter = (ints: array<Instance.t>, comps) => {
 let findInts = () => {
   Js.Console.log("Manual Mode: Create instances from manual args")
   let comps = switch Env.get("component") {
-  | Some(comps) => comps->Js.String2.split(",")->Array.map(comp => comp->Js.String2.split("/"))
+  | Some(comps) => {
+      `Building components: ${comps}`->Js.Console.log
+      comps->Js.String2.split(",")->Array.map(comp => comp->Js.String2.split("/"))
+    }
   | None => []
   }
 
