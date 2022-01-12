@@ -27,7 +27,7 @@ let filter = (ints: array<Instance.t>, comps) => {
 let findInts = () => {
   Js.Console.log("Manual Mode: Create instances from manual args")
   let comps = switch Env.get("component") {
-  | Some(comps) => comps->Js.String.split(",")->Array.map(comp => comp->Js.String.split("/"))
+  | Some(comps) => comps->Js.String2.split(",")->Array.map(comp => comp->Js.String2.split("/"))
   | None => []
   }
 
