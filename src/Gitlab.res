@@ -45,9 +45,9 @@ let base = `
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
-    - conan create $FOLDER $PKG@ $ARGS
-    - conan upload $PKG@ --all -c -r $REPO
-    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $PKG@ --all -c -r $REPO"
+    - conan create $FOLDER $NAME/$VERSION@ $ARGS
+    - conan upload $NAME/$VERSION@ --all -c -r $REPO
+    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO"
   retry:
     max: 2
     when:
@@ -56,11 +56,11 @@ let base = `
   artifacts:
     expire_in: 1 month
     paths:
-      - "conan_data/$PKG/_/_/build/*/meson-logs/*-log.txt"
-      - "conan_data/$PKG/_/_/build/*/*/meson-logs/*-log.txt"
-      - "conan_data/$PKG/_/_/build/*/CMakeFiles/CMake*.log"
-      - "conan_data/$PKG/_/_/build/*/*/CMakeFiles/CMake*.log"
-      - "conan_data/$PKG/_/_/build/*/*/config.log"
+      - "conan_data/$NAME/$VERSION/_/_/build/*/meson-logs/*-log.txt"
+      - "conan_data/$NAME/$VERSION/_/_/build/*/*/meson-logs/*-log.txt"
+      - "conan_data/$NAME/$VERSION/_/_/build/*/CMakeFiles/CMake*.log"
+      - "conan_data/$NAME/$VERSION/_/_/build/*/*/CMakeFiles/CMake*.log"
+      - "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log"
     when: always
 .conan-x86_64:
   extends: .conan
