@@ -67,12 +67,17 @@ let getVariables = ({int, profile}: Instance.zip) => {
   ->getRepo
   ->Result.map(repo =>
     switch (int.name, int.version, int.folder) {
-    | (Some(name), Some(version), Some(folder)) => [
+    | (Some(name), Some(version), Some(folder)) =>
+      [
         ("PKG", `${name}/${version}`),
         ("FOLDER", folder),
         ("REPO", repo),
         ("PROFILE", profile),
-      ]->Array.concat(int->getArgs->Array.length > 0 ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))] : [])
+      ]->Array.concat(
+        int->getArgs->Array.length > 0
+          ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))]
+          : [],
+      )
     | _ => []
     }
   )
@@ -107,6 +112,18 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
           str => str,
         ),
       ]
+      let uploadPkgAlias = switch (
+        Env.get("CI_COMMIT_REF_NAME"),
+        Js.String2.match_(version, %re("/^[0-9a-f]{40}$/")),
+      ) {
+      | (Some(ref), Some(_)) => [
+          ["conan", "upload", `${name}/${ref}@`, "--all", "-c", "-r", repo]->Array.joinWith(
+            " ",
+            str => str,
+          ),
+        ]
+      | _ => []
+      }
       let uploadDbg = switch int.debugPkg {
       | Some(true) => [
           [
@@ -121,7 +138,8 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
         ]
       | _ => []
       }
-      Array.concatMany([createPkg, createDbg, uploadPkg, uploadDbg])
+
+      Array.concatMany([createPkg, createDbg, uploadPkg, uploadPkgAlias, uploadDbg])
     }
   | _ => []
   }
@@ -254,7 +272,10 @@ let getJob = (buildOrder, pkgInfos) => {
     group
     ->Array.map(pkg => {
       let [pkg, revision] = pkg->Js.String2.split("#")
-      let foundPkgs = pkgInfos->Js.Array2.filter(e => revision == e.info.revision && pkg == e.info.reference ++ "@")
+      let foundPkgs =
+        pkgInfos->Js.Array2.filter(e =>
+          revision == e.info.revision && pkg == e.info.reference ++ "@"
+        )
       foundPkgs
       ->Array.map(foundPkg => {
         let {int, profile, mode, hash} = foundPkg
