@@ -68,15 +68,17 @@ let getVariables = ({int, profile}: Instance.zip) => {
   ->Result.map(repo =>
     switch (int.name, int.version, int.folder) {
     | (Some(name), Some(version), Some(folder)) =>
-      [
-        ("PKG", `${name}/${version}`),
-        ("FOLDER", folder),
-        ("REPO", repo),
-        ("PROFILE", profile),
-      ]->Array.concat(
+      [("PKG", `${name}/${version}`), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
+      ->Array.concat(
         int->getArgs->Array.length > 0
           ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))]
           : [],
+      )
+      ->Array.concat(
+        switch version->Js.String2.match_(%re("/^[0-9a-f]{40}$/")) {
+        | Some(_) => [("UPLOAD_ALIAS", "1")]
+        | _ => []
+        },
       )
     | _ => []
     }
