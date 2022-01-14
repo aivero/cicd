@@ -23,7 +23,7 @@ let generateJob = (job: Job_t.t) => {
     | None => []
     },
     switch job.variables {
-    | Some(vars) => ["  variables:"]->Array.concat(vars->Js.Dict.entries->Array.map(((key, val)) => `    ${key}: ${val}`))
+    | Some(vars) => ["  variables:"]->Array.concat(vars->Js.Dict.entries->Array.map(((key, val)) => `    ${key}: "${val}"`))
     | None => []
     },
     switch job.script {
