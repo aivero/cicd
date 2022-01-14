@@ -47,7 +47,7 @@ let base = `
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
     - conan create $FOLDER $NAME/$VERSION@ $ARGS
     - conan upload $NAME/$VERSION@ --all -c -r $REPO
-    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO"
+    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo"
   retry:
     max: 2
     when:
