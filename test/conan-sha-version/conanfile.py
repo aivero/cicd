@@ -2,7 +2,7 @@ from build import *
 
 
 class ConanRecipe(Recipe):
-    description = "Conan test recipe"
+    description = "Conan sha test recipe"
     license = "custom"
 
     def build(self):
