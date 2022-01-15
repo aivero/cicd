@@ -75,8 +75,8 @@ let findInts = () => {
         let (_, ints) = ints->Js.Array2.reduce(((intsHash, ints), int) => {
           let newHash = int->Hash.hash
           intsHash->Js.Array2.some(oldHash => oldHash == newHash)
-            ? (intsHash->Js.Array2.concat([newHash]), ints->Js.Array2.concat([int]))
-            : (intsHash, ints)
+            ? (intsHash, ints)
+            : (intsHash->Js.Array2.concat([newHash]), ints->Js.Array2.concat([int]))
         }, ([], []))
         ints
       })
