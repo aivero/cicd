@@ -34,13 +34,14 @@ let handleConfigChange = confPath => {
 let handleFileChange = (confPath, filePath) => {
   switch confPath->Config.loadFile {
   | Ok(ints) =>
-    Ok(ints
-    ->Js.Array2.filter(({folder}) => {
-      switch folder {
-      | Some(folder) => folder
-      | None => ""
-      }->Js.String2.endsWith(filePath->Path.dirname)
-    }))
+    Ok(
+      ints->Js.Array2.filter(({folder}) => {
+        switch folder {
+        | Some(folder) => folder
+        | None => ""
+        }->Js.String2.endsWith(filePath->Path.dirname)
+      }),
+    )
   | Error(err) => Error(err)
   }->Task.resolve
 }
@@ -56,14 +57,30 @@ let handleChange = file => {
 
 let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
-  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])->TaskResult.map(output => {
-      output->Js.String2.trim
-      ->Js.String2.split("\n")
-      ->Js.Array2.filter(File.exists)
-      ->Js.Array2.reduce((a, file) => {
-        a->Array.concat(file->handleChange)
-      }, [])
-      ->Task.all->Task.map((tasks) => tasks->Flat.array->Result.map(Array.concatMany))
+  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
+  ->TaskResult.map(output => {
+    output
+    ->Js.String2.trim
+    ->Js.String2.split("\n")
+    ->Js.Array2.filter(File.exists)
+    ->Js.Array2.reduce((a, file) => {
+      a->Array.concat(file->handleChange)
+    }, [])
+    ->Task.all
+    ->Task.map(tasks =>
+      tasks
+      ->Flat.array
+      ->Result.map(confs => {
+        let ints = confs->Array.concatMany
+        let (_, ints) = ints->Js.Array2.reduce(((intsHash, ints), int) => {
+          let newHash = int->Hash.hash
+          intsHash->Js.Array2.some(oldHash => oldHash == newHash)
+            ? (intsHash->Js.Array2.concat([newHash]), ints->Js.Array2.concat([int]))
+            : (intsHash, ints)
+        }, ([], []))
+        ints
+      })
+    )
   })
   ->Flat.task
 }
