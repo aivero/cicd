@@ -16,8 +16,7 @@ type pkgInfo = {
   hash: string,
 }
 
-let procs = 32
-let hashLength = 4
+let hashLength = 3
 let hashN = Hash.hashN(_, hashLength)
 
 let getArgs = (int: Instance.t) => {
