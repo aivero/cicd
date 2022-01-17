@@ -47,10 +47,14 @@ let findReqs = ints => {
 
 let load = () => {
   let kind = Env.get("mode")
+  let manual = Env.get("CI_JOB_MANUAL")
 
-  let ints = switch kind {
-  | Some("git") => Git.findInts()
-  | _ => Manual.findInts()
+  let ints = switch (kind, manual) {
+  | (Some("manual"), _) => Manual.findInts()
+  | (Some("git"), _) => Git.findInts()
+  | (Some(mode), _) => Error(`Mode not supported: ${mode}`)->Task.resolve
+  | (None, Some(_)) => Manual.findInts()
+  | (None, None) => Error("Mode not set")->Task.resolve
   }
 
   let ints = ints->findReqs
