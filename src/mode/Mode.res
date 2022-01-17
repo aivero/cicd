@@ -54,7 +54,7 @@ let load = () => {
   | (Some("git"), _) => Git.findInts()
   | (Some(mode), _) => Error(`Mode not supported: ${mode}`)->Task.resolve
   | (None, Some(_)) => Manual.findInts()
-  | (None, None) => Error("Mode not set")->Task.resolve
+  | (None, None) => Git.findInts()
   }
 
   let ints = ints->findReqs
