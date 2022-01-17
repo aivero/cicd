@@ -26,7 +26,7 @@ let filter = (ints: array<Instance.t>, comps) => {
   })
 }
 
-let findInts = () => {
+let findInts = (allInts) => {
   Js.Console.log("Manual Mode: Create instances from manual args")
   let comps = switch Env.get("component") {
   | Some(comps) => {
@@ -36,12 +36,5 @@ let findInts = () => {
   | None => []
   }
 
-  Proc.run(["git", "ls-files", "**devops.yml", "--recurse-submodules"])->TaskResult.flatMap(e =>
-    e
-    ->Js.String2.trim
-    ->Js.String2.split("\n")
-    ->Array.map(Config.loadFile)
-    ->Flat.array
-    ->Result.map(conf => conf->Array.concatMany->filter(comps))
-  )
+  allInts->TaskResult.map(ints => ints->filter(comps))
 }
