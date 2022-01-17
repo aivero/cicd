@@ -4,9 +4,9 @@ let filter = (ints: array<Instance.t>, comps) => {
     | (Some(cname), Some(cversion)) =>
       comps->Js.Array2.some(comp =>
         switch (comp[0], comp[1]) {
-        | (Some(name), Some(version)) if name == "*" && version == "*" => true
-        | (Some(name), Some(version)) if name == "*" => cversion == version
-        | (Some(name), Some(version)) if version == "*" => cname == name
+        | (Some("*"), Some("*")) => true
+        | (Some("*"), Some(version)) => cversion == version
+        | (Some(name), Some("*")) => cname == name
         | (Some(name), None) => cname == name
         | _ => false
         }
