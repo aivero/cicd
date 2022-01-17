@@ -1,7 +1,10 @@
 open Instance
 
 let findAllInts = recursive => {
-  let cmd = ["git", "ls-files", "**devops.yml", "--recurse-submodules"]->Js.Array2.concat(recursive ? ["--recurse-submodules"] : [])
+  let cmd =
+    ["git", "ls-files", "**devops.yml", "--recurse-submodules"]->Js.Array2.concat(
+      recursive ? ["--recurse-submodules"] : [],
+    )
   Proc.run(cmd)->TaskResult.flatMap(e =>
     e
     ->Js.String2.trim
@@ -53,7 +56,10 @@ let load = () => {
   let source = Env.get("CI_PIPELINE_SOURCE")
 
   let recursive = switch recursive {
-  | Some(_) => true
+  | Some(_) => {
+      "Running recursively"->Js.Console.log
+      true
+    }
   | _ => false
   }
 
