@@ -205,6 +205,10 @@ let init = (zips: array<Instance.zip>) => {
     }
   }, [])
   config
+  ->Task.flatMap(_ => switch (Env.get("CONAN_LOGIN_USERNAME"), Env.get("CONAN_LOGIN_PASSWORD"), Env.get("CONAN_REPO_INTERNAL")) {
+  | (Some(user), Some(passwd), Some(repo)) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
+  | _ => Ok("")->Task.resolve
+  })
   ->TaskResult.map(_ =>
     exportPkgs
     ->Array.map(((pkg, folder), ()) => {
