@@ -64,11 +64,11 @@ let base = `
     when: always
 .conan-x86_64:
   extends: .conan
-  tags: [x86_64]
+  tags: [x86_64,aws]
   image: aivero/conan:focal-x86_64
 .conan-armv8:
   extends: .conan
-  tags: [armv8]
+  tags: [armv8,aws]
   image: aivero/conan:focal-armv8
 .conan-x86_64-bootstrap:
   extends: .conan-x86_64
