@@ -2,7 +2,7 @@ open Instance
 
 let findAllInts = recursive => {
   let cmd =
-    ["git", "ls-files", "**devops.yml", "--recurse-submodules"]->Js.Array2.concat(
+    ["git", "ls-files", "**devops.yml"]->Js.Array2.concat(
       recursive ? ["--recurse-submodules"] : [],
     )
   Proc.run(cmd)->TaskResult.flatMap(e =>
