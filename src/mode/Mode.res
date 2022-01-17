@@ -48,6 +48,7 @@ let findReqs = ints => {
 let load = () => {
   let kind = Env.get("mode")
   let manual = Env.get("CI_JOB_MANUAL")
+  `CI_JOB_MANUAL: ${manual->Option.getExn}`->Js.Console.log
 
   let ints = switch (kind, manual) {
   | (Some("manual"), _) => Manual.findInts()
