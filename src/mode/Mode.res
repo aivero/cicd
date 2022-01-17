@@ -47,15 +47,14 @@ let findReqs = ints => {
 
 let load = () => {
   let kind = Env.get("mode")
-  let manual = Env.get("CI_JOB_MANUAL")
-  `CI_JOB_MANUAL: ${manual->Option.getExn}`->Js.Console.log
+  let source = Env.get("CI_PIPELINE_SOURCE")
 
-  let ints = switch (kind, manual) {
+  let ints = switch (kind, source) {
   | (Some("manual"), _) => Manual.findInts()
   | (Some("git"), _) => Git.findInts()
   | (Some(mode), _) => Error(`Mode not supported: ${mode}`)->Task.resolve
-  | (None, Some(_)) => Manual.findInts()
-  | (None, None) => Git.findInts()
+  | (None, Some("web")) => Manual.findInts()
+  | (None, _) => Git.findInts()
   }
 
   let ints = ints->findReqs
