@@ -3,7 +3,7 @@ let getLastRev = () =>
   | Some("0000000000000000000000000000000000000000") =>
     switch Env.get("CI_DEFAULT_BRANCH") {
     | Some(def_branch) =>
-      Proc.run(["git", "merge-base", "HEAD", `origin/${def_branch}`])->TaskResult.map(output => output->Js.String2.trim)
+      Proc.run(["git", "merge-base", "HEAD", `origin/${def_branch}`])->TaskResult.map(Js.String2.trim)
     | None => Error("CI_COMMIT_REF_NAME or CI_DEFAULT_BRANCH not set")->Task.resolve
     }
   | Some(val) => Ok(val)->Task.resolve
