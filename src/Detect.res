@@ -22,11 +22,7 @@ let getImage = ({int, profile}: Instance.zip) => {
   | _ => ""
   }
 
-  switch (os, arch) {
-  | (Ok(os), Ok(arch)) => Ok(`${base}${os}-${arch}${end}`)
-  | (Error(err), _) => Error(err)
-  | (_, Error(err)) => Error(err)
-  }
+  Seq.result2(os, arch)->Result.map(((os, arch)) => `${base}${os}-${arch}${end}`) 
 }
 
 let getExtends = ({int, profile}: Instance.zip) => {
@@ -76,9 +72,5 @@ let getDockerPlatform = (profile) => {
   | _ => Error(`Could not parse profile ${profile} to an arch.`)
   }
 
-  switch (os, arch) {
-  | (Ok(os), Ok(arch)) => Ok(`${os} /${arch}`)
-  | (Error(err), _) => Error(err)
-  | (_, Error(err)) => Error(err)
-  }
+  Seq.result2(os, arch)->Result.map(((os, arch)) => `${os} /${arch}`) 
 };
