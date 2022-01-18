@@ -2,6 +2,7 @@ generate-config:
   image: aivero/conan:focal-x86_64
   stage: build
   variables:
+    mode: manual
     component: "*/*"
   script:
     - deno --version
