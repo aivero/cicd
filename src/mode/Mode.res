@@ -8,7 +8,7 @@ let findAllInts = recursive => {
     ->Js.String2.trim
     ->Js.String2.split("\n")
     ->Array.map(Config.loadFile)
-    ->Flat.array
+    ->Seq.array
     ->Result.map(Array.concatMany)
   )
 }
@@ -76,5 +76,5 @@ let load = () => {
     let zips = ints->Instance.zip
     zips->Job.load
   })
-  ->Flat.task
+  ->TaskResult.flatten
 }

@@ -215,7 +215,7 @@ let init = (zips: array<Instance.zip>) => {
     })
     ->TaskResult.pool(Sys.cpus)
   )
-  ->Flat.task
+  ->TaskResult.flatten
 }
 
 let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
@@ -241,7 +241,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
     })
     ->TaskResult.pool(Sys.cpus)
   })
-  ->Flat.task
+  ->TaskResult.flatten
   ->TaskResult.map(pkgInfos => {
     let locks = pkgInfos->Array.map(pkgInfo => {
       switch (pkgInfo.int.name, pkgInfo.int.version) {
@@ -256,7 +256,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
         )->TaskResult.map(_ => pkgInfos)
       : Ok(pkgInfos)->Task.resolve
   })
-  ->Flat.task
+  ->TaskResult.flatten
   ->TaskResult.map(_ => {
     File.exists("lock.bundle")
       ? Proc.run([
@@ -269,7 +269,7 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
         ])
       : Ok("")->Task.resolve
   })
-  ->Flat.task
+  ->TaskResult.flatten
   ->TaskResult.flatMap(_ => {
     File.exists("build_order.json")
       ? File.read("build_order.json")->Result.map(content => content->Js.Json.parseExn->toLockfile)
@@ -329,12 +329,12 @@ let getJob = (buildOrder, pkgInfos) => {
           needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
         }),
       ])
-      ->Flat.array
+      ->Seq.array
     })
-    ->Flat.array
+    ->Seq.array
     ->Result.map(Array.concatMany)
   })
-  ->Flat.array
+  ->Seq.array
   ->Result.map(Array.concatMany)
 }
 
@@ -344,7 +344,7 @@ let getJobs = (zips: array<Instance.zip>) => {
     zips
     ->init
     ->TaskResult.map(_ => zips->Array.map((zip, ()) => zip->getInfo)->TaskResult.pool(Sys.cpus))
-    ->Flat.task
+    ->TaskResult.flatten
   let lockfile = pkgInfos->getLockFile
   Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
     switch (pkgInfos, lockfile) {
