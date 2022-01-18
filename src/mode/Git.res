@@ -1,6 +1,6 @@
 let lastRev = switch Env.get("CI_COMMIT_BEFORE_SHA") {
+| Some("0000000000000000000000000000000000000000") | None => "HEAD^"
 | Some(val) => val
-| None => "HEAD^"
 }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
