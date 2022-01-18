@@ -3,16 +3,11 @@ let getLastRev = () =>
   | Some("0000000000000000000000000000000000000000") =>
     switch Seq.option2(Env.get("CI_COMMIT_REF_NAME"), Env.get("CI_DEFAULT_BRANCH")) {
     | Some((branch, def_branch)) =>
-      Proc.run(["git", "merge-base", branch, def_branch])->Task.map(branch_base =>
-        switch branch_base {
-        | Ok(branch_base) => branch_base
-        | Error(_) => "^HEAD"
-        }
-      )
-    | None => "HEAD^"->Task.resolve
+      Proc.run(["git", "merge-base", branch, def_branch])
+    | None => Error("CI_COMMIT_REF_NAME or CI_DEFAULT_BRANCH not set")->Task.resolve
     }
-  | Some(val) => val->Task.resolve
-  | None => "HEAD^"->Task.resolve
+  | Some(val) => Ok(val)->Task.resolve
+  | None => Ok("HEAD^")->Task.resolve
   }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
@@ -27,13 +22,13 @@ let handleConfigChange = confPath => {
     )
   let lastRev = getLastRev()
   let intsOld =
-    lastRev->Task.flatMap(lastRev =>
+    lastRev->TaskResult.map(lastRev =>
       Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.flatMap(conf =>
         conf->Config.load(confPath)->Seq.result
       )
-    )
+    )->TaskResult.flatten
   let lastRev = getLastRev()
-  let filesOld = lastRev->Task.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
+  let filesOld = lastRev->TaskResult.map(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))->TaskResult.flatten
 
   (intsNew, intsOld, filesOld)
   ->Task.all3
@@ -75,7 +70,8 @@ let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
   let lastRev = getLastRev()
   lastRev
-  ->Task.flatMap(lastRev => Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"]))
+  ->TaskResult.map(lastRev => Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"]))
+  ->TaskResult.flatten
   ->TaskResult.map(output => {
     output
     ->Js.String2.trim
