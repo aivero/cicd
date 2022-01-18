@@ -1,9 +1,9 @@
 let getLastRev = () =>
   switch Env.get("CI_COMMIT_BEFORE_SHA") {
   | Some("0000000000000000000000000000000000000000") =>
-    switch Seq.option2(Env.get("CI_COMMIT_REF_NAME"), Env.get("CI_DEFAULT_BRANCH")) {
-    | Some((branch, def_branch)) =>
-      Proc.run(["git", "merge-base", branch, def_branch])
+    switch Env.get("CI_DEFAULT_BRANCH") {
+    | Some(def_branch) =>
+      Proc.run(["git", "merge-base", "HEAD", def_branch])
     | None => Error("CI_COMMIT_REF_NAME or CI_DEFAULT_BRANCH not set")->Task.resolve
     }
   | Some(val) => Ok(val)->Task.resolve
