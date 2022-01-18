@@ -8,7 +8,7 @@ let rec chunk = (array, size) => {
 }
 
 let generateJob = (job: Job_t.t) => {
-  Array.concatMany([
+  Flat.array([
     [`${job.name}:`, `  needs: [${job.needs->Array.joinWith(", ", a => a)}]`],
     switch job.image {
     | Some(image) => [`  image: ${image}`]
@@ -87,7 +87,7 @@ let generate = (jobs: array<Job_t.t>) => {
 
   jobs
   ->Array.map(generateJob)
-  ->Array.concatMany
+  ->Flat.array
   ->Array.joinWith("\n", a => a)
   ->(conf => base ++ conf)
   ->encode

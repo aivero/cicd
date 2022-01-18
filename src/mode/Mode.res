@@ -8,8 +8,8 @@ let findAllInts = recursive => {
     ->Js.String2.trim
     ->Js.String2.split("\n")
     ->Array.map(Config.loadFile)
-    ->Seq.array
-    ->Result.map(Array.concatMany)
+    ->Seq.result
+    ->Result.map(Flat.array)
   )
 }
 
@@ -25,7 +25,7 @@ let findReqs = (ints, allInts) => {
             | None => []
             }
           )
-          ->Array.concatMany
+          ->Flat.array
         let reqs = allInts->Js.Array2.filter(int => {
           switch int.name {
           | Some(name) => reqs->Js.Array2.includes(name)

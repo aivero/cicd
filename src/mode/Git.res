@@ -11,11 +11,11 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 let handleConfigChange = confPath => {
   let intsNew =
     Proc.run(["git", "show", `HEAD:${confPath}`])->TaskResult.flatMap(conf =>
-      conf->Config.load(confPath)->Seq.array
+      conf->Config.load(confPath)->Seq.result
     )
   let intsOld =
     Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.flatMap(conf =>
-      conf->Config.load(confPath)->Seq.array
+      conf->Config.load(confPath)->Seq.result
     )
   let filesOld = Proc.run(["git", "ls-tree", "-r", lastRev])
 
@@ -69,9 +69,9 @@ let findInts = () => {
     ->Task.all
     ->Task.map(tasks =>
       tasks
-      ->Seq.array
+      ->Seq.result
       ->Result.map(confs => {
-        let ints = confs->Array.concatMany
+        let ints = confs->Flat.array
         let (_, ints) = ints->Js.Array2.reduce(((intsHash, ints), int) => {
           let newHash = int->Hash.hash
           intsHash->Js.Array2.some(oldHash => oldHash == newHash)

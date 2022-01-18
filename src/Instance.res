@@ -148,5 +148,5 @@ let zip = ints =>
       | None => Error("No profiles")
       }
     )
-    ->Seq.array
-    ->Result.map(Array.concatMany)
+    ->Seq.result
+    ->Result.map(Flat.array)

@@ -24,14 +24,14 @@ let rec pool = (tasks: array<unit => Task.t<result<'a, string>>>, count): Task.t
   `pool: ${rest->Array.length->Int.toString}`->Js.Console.log
   curTasks
   ->Task.flatMap(res1 => {
-    let tasks = res1->Task.all->Task.map(Seq.array)
+    let tasks = res1->Task.all->Task.map(Seq.result)
     tasks->map(res1 =>
       switch rest->Array.length {
       | 0 => Ok(res1)->Task.resolve
       | _ =>
         rest
         ->pool(count)
-        ->Task.map(res2 => res2->Result.map(res2 => [res1, res2]->Array.concatMany))
+        ->Task.map(res2 => res2->Result.map(res2 => [res1, res2]->Flat.array))
       }
     )
   })

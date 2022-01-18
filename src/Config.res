@@ -20,5 +20,5 @@ let load = (content, path) => {
   }
 }
 
-let loadFile = path => path->File.read->Result.flatMap(content => content->load(path)->Seq.array)
+let loadFile = path => path->File.read->Result.flatMap(content => content->load(path)->Seq.result)
   

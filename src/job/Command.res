@@ -24,6 +24,6 @@ let getJobs = (zips: array<Instance.zip>) => {
       | _ => Error(`${zip.int.name->Option.getExn}: name or cmds not specified`)
       }
     )
-  })->Seq.array
+  })->Seq.result
   ->Task.resolve
 }

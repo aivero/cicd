@@ -49,7 +49,7 @@ let getArgs = (int: Instance.t) => {
   | _ => []
   }
 
-  Array.concatMany([args, sets, opts])
+  Flat.array([args, sets, opts])
 }
 
 let getRepo = (int: Instance.t) => {
@@ -146,12 +146,12 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
       | _ => []
       }
 
-      Array.concatMany([createPkg, createDbg, uploadPkg, uploadPkgAlias, uploadDbg])
+      Flat.array([createPkg, createDbg, uploadPkg, uploadPkgAlias, uploadDbg])
     }
   | _ => []
   }
 
-  Array.concatMany([initCmds, cmds])
+  Flat.array([initCmds, cmds])
 }
 
 external toConanInfo: 'a => array<conanInfo> = "%identity"
@@ -161,7 +161,7 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
   | (Some(name), Some(version)) => {
       let hash = hashN({int: int, profile: profile, mode: mode})
       Proc.run(
-        Array.concatMany([
+        Flat.array([
           ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
           int->getArgs,
           [`${name}/${version}@`],
@@ -329,13 +329,13 @@ let getJob = (buildOrder, pkgInfos) => {
           needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
         }),
       ])
-      ->Seq.array
+      ->Seq.result
     })
-    ->Seq.array
-    ->Result.map(Array.concatMany)
+    ->Seq.result
+    ->Result.map(Flat.array)
   })
-  ->Seq.array
-  ->Result.map(Array.concatMany)
+  ->Seq.result
+  ->Result.map(Flat.array)
 }
 
 let getJobs = (zips: array<Instance.zip>) => {

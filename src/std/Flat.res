@@ -1,3 +1,5 @@
+let array = Array.concatMany
+
 /*
 let taskArray = (to: Task.t<array<Task.t<'a>>>) => {
   to->Task.flatMap(r => {

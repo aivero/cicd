@@ -28,6 +28,6 @@ let getMode = (int: Instance.t) => {
 let load = ints => {
   ints->Result.map(ints => {
     Task.all([Command.getJobs(ints), Conan.getJobs(ints)])
-    ->Task.map(jobs => jobs->Seq.array->Result.map(Array.concatMany))
+    ->Task.map(jobs => jobs->Seq.result->Result.map(Flat.array))
   })
 }
