@@ -1,7 +1,19 @@
-let lastRev = switch Env.get("CI_COMMIT_BEFORE_SHA") {
-| Some("0000000000000000000000000000000000000000") | None => "HEAD^"
-| Some(val) => val
-}
+let getLastRev = () =>
+  switch Env.get("CI_COMMIT_BEFORE_SHA") {
+  | Some("0000000000000000000000000000000000000000") =>
+    switch Seq.option2(Env.get("CI_COMMIT_REF_NAME"), Env.get("CI_DEFAULT_BRANCH")) {
+    | Some((branch, def_branch)) =>
+      Proc.run(["git", "merge-base", branch, def_branch])->Task.map(branch_base =>
+        switch branch_base {
+        | Ok(branch_base) => branch_base
+        | Error(_) => "^HEAD"
+        }
+      )
+    | None => "HEAD^"->Task.resolve
+    }
+  | Some(val) => val->Task.resolve
+  | None => "HEAD^"->Task.resolve
+  }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
   let hashsOld = intsOld->Array.map(Hash.hash)
@@ -13,11 +25,15 @@ let handleConfigChange = confPath => {
     Proc.run(["git", "show", `HEAD:${confPath}`])->TaskResult.flatMap(conf =>
       conf->Config.load(confPath)->Seq.result
     )
+  let lastRev = getLastRev()
   let intsOld =
-    Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.flatMap(conf =>
-      conf->Config.load(confPath)->Seq.result
+    lastRev->Task.flatMap(lastRev =>
+      Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.flatMap(conf =>
+        conf->Config.load(confPath)->Seq.result
+      )
     )
-  let filesOld = Proc.run(["git", "ls-tree", "-r", lastRev])
+  let lastRev = getLastRev()
+  let filesOld = lastRev->Task.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
 
   (intsNew, intsOld, filesOld)
   ->Task.all3
@@ -57,7 +73,9 @@ let handleChange = file => {
 
 let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
-  Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
+  let lastRev = getLastRev()
+  lastRev
+  ->Task.flatMap(lastRev => Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"]))
   ->TaskResult.map(output => {
     output
     ->Js.String2.trim
