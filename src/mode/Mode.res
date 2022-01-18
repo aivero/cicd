@@ -15,36 +15,32 @@ let findAllInts = recursive => {
 
 let findReqs = (ints, allInts) => {
   Task.all2((ints, allInts))->Task.map(((ints, allInts)) => {
-    switch (ints, allInts) {
-    | (Ok(ints), Ok(allInts)) => {
-        let reqs =
-          ints
-          ->Array.map(int =>
-            switch int.req {
-            | Some(req) => req
-            | None => []
+    Seq.result2(ints, allInts)->Result.flatMap(((ints, allInts)) => {
+      let reqs =
+        ints
+        ->Array.map(int =>
+          switch int.req {
+          | Some(req) => req
+          | None => []
+          }
+        )
+        ->Flat.array
+      let reqs = allInts->Js.Array2.filter(int => {
+        switch int.name {
+        | Some(name) => reqs->Js.Array2.includes(name)
+        | None => false
+        } &&
+        !(
+          ints->Array.some(int =>
+            switch int.name {
+            | Some(name) => reqs->Js.Array2.includes(name)
+            | None => false
             }
           )
-          ->Flat.array
-        let reqs = allInts->Js.Array2.filter(int => {
-          switch int.name {
-          | Some(name) => reqs->Js.Array2.includes(name)
-          | None => false
-          } &&
-          !(
-            ints->Array.some(int =>
-              switch int.name {
-              | Some(name) => reqs->Js.Array2.includes(name)
-              | None => false
-              }
-            )
-          )
-        })
-        Ok(ints->Array.concat(reqs))
-      }
-    | (Error(error), _) => Error(error)
-    | (_, Error(error)) => Error(error)
-    }
+        )
+      })
+      Ok(ints->Array.concat(reqs))
+    })
   })
 }
 
