@@ -38,6 +38,7 @@ let base = `
   variables:
     CONAN_USER_HOME: "$CI_PROJECT_DIR"
     CONAN_DATA_PATH: "$CI_PROJECT_DIR/conan_data"
+    GIT_SUBMODULE_STRATEGY: recursive
   script:
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
     - conan config set general.default_profile=$PROFILE
