@@ -8,8 +8,8 @@ let getJobs = (zips: array<Instance.zip>) => {
     zip
     ->Detect.getImage
     ->Result.flatMap(image =>
-      switch (zip.int.name, zip.int.cmds) {
-      | (Some(name), Some(cmds)) => Ok({
+      switch Seq.option2(zip.int.name, zip.int.cmds) {
+      | Some((name, cmds)) => Ok({
           name: `${name}-${zip.profile}`,
           script: Some(cmds),
           image: Some(image),

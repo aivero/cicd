@@ -25,8 +25,8 @@ let getArgs = (int: Instance.t) => {
   | None => []
   }
 
-  let sets = switch (int.name, int.settings) {
-  | (Some(name), Some(settings)) =>
+  let sets = switch Seq.option2(int.name, int.settings) {
+  | Some(name, settings) =>
     settings
     ->Js.Dict.entries
     ->Array.map(((key, val)) => (
@@ -37,8 +37,8 @@ let getArgs = (int: Instance.t) => {
   | _ => []
   }
 
-  let opts = switch (int.name, int.options) {
-  | (Some(name), Some(options)) =>
+  let opts = switch Seq.option2(int.name, int.options) {
+  | Some(name, options) =>
     options
     ->Js.Dict.entries
     ->Array.map(((key, val)) => (
@@ -65,8 +65,8 @@ let getVariables = ({int, profile}: Instance.zip) => {
   int
   ->getRepo
   ->Result.map(repo =>
-    switch (int.name, int.version, int.folder) {
-    | (Some(name), Some(version), Some(folder)) =>
+    switch [int.name, int.version, int.folder]->Seq.option {
+    | Some([name, version, folder]) =>
       [
         ("NAME", name),
         ("VERSION", version),
@@ -101,8 +101,8 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
 
   let repo = getRepo(int)
   let args = int->getArgs
-  let cmds = switch (int.name, int.version, int.folder, repo) {
-  | (Some(name), Some(version), Some(folder), Ok(repo)) => {
+  let cmds = switch ([int.name, int.version, int.folder]->Seq.option, repo) {
+  | (Some([name, version, folder]), Ok(repo)) => {
       let createPkg = [
         ["conan", "create", "-u", folder, `${name}/${version}@`]
         ->Js.Array2.concat(args)
@@ -119,11 +119,11 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
           str => str,
         ),
       ]
-      let uploadPkgAlias = switch (
+      let uploadPkgAlias = switch Seq.option2(
         Env.get("CI_COMMIT_REF_NAME"),
         Js.String2.match_(version, %re("/^[0-9a-f]{40}$/")),
       ) {
-      | (Some(ref), Some(_)) => [
+      | Some(ref, _) => [
           ["conan", "upload", `${name}/${ref}@`, "--all", "-c", "-r", repo]->Array.joinWith(
             " ",
             str => str,
@@ -157,8 +157,8 @@ let getCmds = ({int, profile}: Instance.zip): array<string> => {
 external toConanInfo: 'a => array<conanInfo> = "%identity"
 
 let getInfo = ({int, profile, mode}: Instance.zip) => {
-  switch (int.name, int.version) {
-  | (Some(name), Some(version)) => {
+  switch Seq.option2(int.name, int.version) {
+  | Some(name, version) => {
       let hash = hashN({int: int, profile: profile, mode: mode})
       Proc.run(
         Flat.array([
@@ -189,14 +189,14 @@ let getInfo = ({int, profile, mode}: Instance.zip) => {
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
 let init = (zips: array<Instance.zip>) => {
-  let (url, dir) = switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR")) {
-  | (Some(url), Some(dir)) => (url, dir)
+  let (url, dir) = switch Seq.option2(Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR")) {
+  | Some(url, dir) => (url, dir)
   | _ => ("", "")
   }
   let config = Proc.run(["conan", "config", "install", url, "-sf", dir])
   let exportPkgs = zips->Js.Array2.reduce((a, zip) => {
-    switch (zip.int.name, zip.int.version, zip.int.folder) {
-    | (Some(name), Some(version), Some(folder)) =>
+    switch [zip.int.name, zip.int.version, zip.int.folder]->Seq.option {
+    | Some([name, version, folder]) =>
       a->Array.some(e => e == (`${name}/${version}@`, folder))
         ? a
         : a->Array.concat([(`${name}/${version}@`, folder)])
@@ -204,8 +204,8 @@ let init = (zips: array<Instance.zip>) => {
     }
   }, [])
   config
-  ->Task.flatMap(_ => switch (Env.get("CONAN_LOGIN_USERNAME"), Env.get("CONAN_LOGIN_PASSWORD"), Env.get("CONAN_REPO_INTERNAL")) {
-  | (Some(user), Some(passwd), Some(repo)) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
+  ->Task.flatMap(_ => switch [Env.get("CONAN_LOGIN_USERNAME"), Env.get("CONAN_LOGIN_PASSWORD"), Env.get("CONAN_REPO_INTERNAL")]->Seq.option {
+  | Some([user, passwd, repo]) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
   | _ => Ok("")->Task.resolve
   })
   ->TaskResult.map(_ =>
@@ -223,8 +223,8 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   ->TaskResult.map(pkgInfos => {
     pkgInfos
     ->Array.map((pkgInfo, ()) => {
-      switch (pkgInfo.int.name, pkgInfo.int.version) {
-      | (Some(name), Some(version)) =>
+      switch Seq.option2(pkgInfo.int.name, pkgInfo.int.version) {
+      | Some(name, version) =>
         Proc.run(
           [
             "conan",
@@ -244,8 +244,8 @@ let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
   ->TaskResult.flatten
   ->TaskResult.map(pkgInfos => {
     let locks = pkgInfos->Array.map(pkgInfo => {
-      switch (pkgInfo.int.name, pkgInfo.int.version) {
-      | (Some(name), Some(version)) => `${name}-${version}-${hashN(pkgInfo)}.lock`
+      switch Seq.option2(pkgInfo.int.name, pkgInfo.int.version) {
+      | Some(name, version) => `${name}-${version}-${hashN(pkgInfo)}.lock`
       | _ => ""
       }
     })
