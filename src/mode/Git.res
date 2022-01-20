@@ -70,7 +70,10 @@ let findInts = () => {
   Js.Console.log("Git Mode: Create instances from changed files in git")
   let lastRev = getLastRev()
   lastRev
-  ->TaskResult.map(lastRev => Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"]))
+  ->TaskResult.map(lastRev => {
+      Js.Console.log(`Last revision: ${lastRev}`)
+      Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
+  })
   ->TaskResult.flatten
   ->TaskResult.map(output => {
     output
