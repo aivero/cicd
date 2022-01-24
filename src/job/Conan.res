@@ -3,57 +3,72 @@ open Job_t
 
 @send external toString: 'a => string = "toString"
 
+type conanInstance = {
+  base: Instance.t,
+  extends: array<string>,
+  hash: string,
+  revision: string,
+  profile: string,
+  repo: string,
+  args: array<string>,
+}
+
 type conanInfo = {
   revision: string,
   reference: string,
 }
 
+/*
 type pkgInfo = {
   info: conanInfo,
   int: Instance.t,
   profile: string,
-  mode: Instance.mode,
   hash: string,
 }
+*/
 
 let hashLength = 3
 let hashN = Hash.hashN(_, hashLength)
 
-let getArgs = (int: Instance.t) => {
+let getArgs = (name, int: Yaml.t) => {
   let args = switch Env.get("args") {
   | Some(args) => args->Js.String2.split(" ")
   | None => []
   }
 
-  let sets = switch Seq.option2(int.name, int.settings) {
-  | Some(name, settings) =>
-    settings
+  let sets = switch int->Yaml.get("settings") {
+  | Yaml.Object(sets) =>
+    sets
     ->Js.Dict.entries
-    ->Array.map(((key, val)) => (
-      key,
-      val->toString == "true" ? "True" : val->toString == "false" ? "False" : val,
-    ))
-    ->Array.map(((key, val)) => `-s ${name}:${key}=${val}`)
+    ->Array.map(((key, val)) =>
+      switch val {
+      | Yaml.Bool(true) => (key, "True")
+      | Yaml.Bool(false) => (key, "False")
+      | _ => (key, "False")
+      }
+    )
   | _ => []
-  }
+  }->Array.map(((key, val)) => `-s ${name}:${key}=${val}`)
 
-  let opts = switch Seq.option2(int.name, int.options) {
-  | Some(name, options) =>
-    options
+  let opts = switch int->Yaml.get("options") {
+  | Yaml.Object(opts) =>
+    opts
     ->Js.Dict.entries
-    ->Array.map(((key, val)) => (
-      key,
-      val->toString == "true" ? "True" : val->toString == "false" ? "False" : val,
-    ))
-    ->Array.map(((key, val)) => `-o ${name}:${key}=${val}`)
+    ->Array.map(((key, val)) =>
+      switch val {
+      | Yaml.Bool(true) => (key, "True")
+      | Yaml.Bool(false) => (key, "False")
+      | _ => (key, "False")
+      }
+    )
   | _ => []
-  }
+  }->Array.map(((key, val)) => `-o ${name}:${key}=${val}`)
 
   Flat.array([args, sets, opts])
 }
 
-let getRepo = (int: Instance.t) => {
-  [int.folder->Option.getExn, "conanfile.py"]
+let getRepo = folder => {
+  [folder, "conanfile.py"]
   ->Path.join
   ->File.read
   ->Result.map(content =>
@@ -61,296 +76,244 @@ let getRepo = (int: Instance.t) => {
   )
 }
 
-let getVariables = ({int, profile}: Instance.zip) => {
-  int
-  ->getRepo
-  ->Result.map(repo =>
-    switch [int.name, int.version, int.folder]->Seq.option {
-    | Some([name, version, folder]) =>
-      [
-        ("NAME", name),
-        ("VERSION", version),
-        ("FOLDER", folder),
-        ("REPO", repo),
-        ("PROFILE", profile),
-      ]
-      ->Array.concat(
-        int->getArgs->Array.length > 0
-          ? [("ARGS", int->getArgs->Array.joinWith(" ", str => str))]
-          : [],
-      )
-      ->Array.concat(
-        switch version->Js.String2.match_(%re("/^[0-9a-f]{40}$/")) {
-        | Some(_) => [("UPLOAD_ALIAS", "1")]
-        | _ => []
-        },
-      )
+let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanInstance) => {
+  [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
+  ->Array.concat(args->Array.length > 0 ? [("ARGS", args->Array.joinWith(" ", str => str))] : [])
+  ->Array.concat(
+    switch version->Js.String2.match_(%re("/^[0-9a-f]{40}$/")) {
+    | Some(_) => [("UPLOAD_ALIAS", "1")]
     | _ => []
-    }
+    },
   )
-}
-
-let getCmds = ({int, profile}: Instance.zip): array<string> => {
-  let initCmds = [
-    `conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR`,
-    `conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL`,
-    `conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL`,
-    `conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC`,
-    `conan config set general.default_profile=${profile}`,
-  ]
-
-  let repo = getRepo(int)
-  let args = int->getArgs
-  let cmds = switch ([int.name, int.version, int.folder]->Seq.option, repo) {
-  | (Some([name, version, folder]), Ok(repo)) => {
-      let createPkg = [
-        ["conan", "create", "-u", folder, `${name}/${version}@`]
-        ->Js.Array2.concat(args)
-        ->Array.joinWith(" ", str => str),
-      ]
-      let createDbg = [
-        ["conan", "create", folder, `${name}-dbg/${version}@`]
-        ->Js.Array2.concat(args)
-        ->Array.joinWith(" ", str => str),
-      ]
-      let uploadPkg = [
-        ["conan", "upload", `${name}/${version}@`, "--all", "-c", "-r", repo]->Array.joinWith(
-          " ",
-          str => str,
-        ),
-      ]
-      let uploadPkgAlias = switch Seq.option2(
-        Env.get("CI_COMMIT_REF_NAME"),
-        Js.String2.match_(version, %re("/^[0-9a-f]{40}$/")),
-      ) {
-      | Some(ref, _) => [
-          ["conan", "upload", `${name}/${ref}@`, "--all", "-c", "-r", repo]->Array.joinWith(
-            " ",
-            str => str,
-          ),
-        ]
-      | _ => []
-      }
-      let uploadDbg = switch int.debugPkg {
-      | Some(true) => [
-          [
-            "conan",
-            "upload",
-            `${name}-dbg/${version}@`,
-            "--all",
-            "-c",
-            "-r",
-            repo,
-          ]->Array.joinWith(" ", str => str),
-        ]
-      | _ => []
-      }
-
-      Flat.array([createPkg, createDbg, uploadPkg, uploadPkgAlias, uploadDbg])
-    }
-  | _ => []
-  }
-
-  Flat.array([initCmds, cmds])
 }
 
 external toConanInfo: 'a => array<conanInfo> = "%identity"
 
-let getInfo = ({int, profile, mode}: Instance.zip) => {
-  switch Seq.option2(int.name, int.version) {
-  | Some(name, version) => {
-      let hash = hashN({int: int, profile: profile, mode: mode})
-      Proc.run(
-        Flat.array([
-          ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
-          int->getArgs,
-          [`${name}/${version}@`],
-        ]),
-      )->TaskResult.flatMap(_ =>
-        File.read(`${name}-${version}-${hash}.json`)->Result.flatMap(output =>
-          output
-          ->Js.Json.parseExn
-          ->toConanInfo
-          ->Js.Array2.find(e => e.reference == `${name}/${version}`)
-          ->(
-            find =>
-              switch find {
-              | Some(info) => Ok({int: int, profile: profile, info: info, mode: mode, hash: hash})
-              | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
-              }
-          )
+/*
+let getInfo = ({name, version, profile, args, hash}: conanInstance) => {
+  Proc.run(
+    Flat.array([
+      ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
+      args,
+      [`${name}/${version}@`],
+    ]),
+  )->TaskResult.flatMap(_ =>
+    File.read(`${name}-${version}-${hash}.json`)->Result.flatMap(output =>
+      switch output->Json.parse {
+      | Json.Array(json) =>
+        json
+        ->Js.Array2.find(e => switch e {
+        | Json.Object(obj) => obj->Js_dict.get("reference") == Some(Json.String(`${name}/${version}`))
+        | _ => false
+        })
+        ->(
+          find =>
+            switch find {
+            | Some(info) => Ok(info)
+            | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
+            }
         )
-      )
-    }
-  | _ => Error("Name or version not defined")->Task.resolve
-  }
-}
+      | _ => Error(`Invalid json file: ${name}-${version}-${hash}.json`)
+      }
+    )
+  )
+}*/
 
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
-let init = (zips: array<Instance.zip>) => {
-  let (url, dir) = switch Seq.option2(Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR")) {
-  | Some(url, dir) => (url, dir)
-  | _ => ("", "")
-  }
-  let config = Proc.run(["conan", "config", "install", url, "-sf", dir])
-  let exportPkgs = zips->Js.Array2.reduce((a, zip) => {
-    switch [zip.int.name, zip.int.version, zip.int.folder]->Seq.option {
-    | Some([name, version, folder]) =>
-      a->Array.some(e => e == (`${name}/${version}@`, folder))
-        ? a
-        : a->Array.concat([(`${name}/${version}@`, folder)])
-    | _ => a
-    }
+let init = (ints: array<Instance.t>) => {
+  let exportPkgs = ints->Js.Array2.reduce((pkgs, {name, version, folder}) => {
+    pkgs->Array.some(pkg => pkg == (`${name}/${version}@`, folder))
+      ? pkgs
+      : pkgs->Array.concat([(`${name}/${version}@`, folder)])
   }, [])
+
+  let config =
+    switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR"))->Seq.option2 {
+    | Some(url, dir) => Ok((url, dir))
+    | _ => Error("Conan config url or dir not defined")
+    }
+    ->Task.resolve
+    ->TaskResult.flatMap(((url, dir)) => Proc.run(["conan", "config", "install", url, "-sf", dir]))
+
   config
-  ->Task.flatMap(_ => switch [Env.get("CONAN_LOGIN_USERNAME"), Env.get("CONAN_LOGIN_PASSWORD"), Env.get("CONAN_REPO_INTERNAL")]->Seq.option {
-  | Some([user, passwd, repo]) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
-  | _ => Ok("")->Task.resolve
-  })
-  ->TaskResult.map(_ =>
+  ->TaskResult.flatMap(_ =>
+    switch [
+      Env.get("CONAN_LOGIN_USERNAME"),
+      Env.get("CONAN_LOGIN_PASSWORD"),
+      Env.get("CONAN_REPO_ALL"),
+    ]->Seq.option {
+    | Some([user, passwd, repo]) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
+    | _ => Error("Conan login, password or repo not defined")->Task.resolve
+    }
+  )
+  ->TaskResult.flatMap(_ =>
     exportPkgs
     ->Array.map(((pkg, folder), ()) => {
       Proc.run(["conan", "export", folder, pkg])
     })
     ->TaskResult.pool(Sys.cpus)
   )
-  ->TaskResult.flatten
 }
 
-let getLockFile = (pkgInfos: Task.t<result<array<pkgInfo>, string>>) => {
-  pkgInfos
-  ->TaskResult.map(pkgInfos => {
-    pkgInfos
-    ->Array.map((pkgInfo, ()) => {
-      switch Seq.option2(pkgInfo.int.name, pkgInfo.int.version) {
-      | Some(name, version) =>
-        Proc.run(
-          [
-            "conan",
-            "lock",
-            "create",
-            `--ref=${name}/${version}`,
-            `--build=${name}/${version}`,
-            `--lockfile-out=${name}-${version}-${hashN(pkgInfo)}.lock`,
-            `-pr=${pkgInfo.profile}`,
-          ]->Array.concat(pkgInfo.int->getArgs),
-        )->TaskResult.map(_ => pkgInfo)
-      | _ => Error("This should not happen")->Task.resolve
-      }
-    })
-    ->TaskResult.pool(Sys.cpus)
-  })
-  ->TaskResult.flatten
-  ->TaskResult.map(pkgInfos => {
-    let locks = pkgInfos->Array.map(pkgInfo => {
-      switch Seq.option2(pkgInfo.int.name, pkgInfo.int.version) {
-      | Some(name, version) => `${name}-${version}-${hashN(pkgInfo)}.lock`
-      | _ => ""
-      }
-    })
-    locks->Js.Console.log
+let getBuildOrder = (ints: array<conanInstance>) => {
+  let locks = ints->Array.map(({base: {name, version}, hash}) => `${name}-${version}-${hash}.lock`)
+  locks->Js.Console.log
+  let bundle =
     locks->Array.length > 0
       ? Proc.run(
           ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
-        )->TaskResult.map(_ => pkgInfos)
-      : Ok(pkgInfos)->Task.resolve
-  })
-  ->TaskResult.flatten
-  ->TaskResult.map(_ => {
-    File.exists("lock.bundle")
-      ? Proc.run([
-          "conan",
-          "lock",
-          "bundle",
-          "build-order",
-          "lock.bundle",
-          "--json=build_order.json",
-        ])
+        )
       : Ok("")->Task.resolve
-  })
-  ->TaskResult.flatten
+  bundle
   ->TaskResult.flatMap(_ => {
-    File.exists("build_order.json")
-      ? File.read("build_order.json")->Result.map(content => content->Js.Json.parseExn->toLockfile)
-      : Ok([])
+    Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
+  })
+  ->TaskResult.flatMap(_ => {
+    File.read("build_order.json")
+    ->Result.map(content => content->Js.Json.parseExn->toLockfile)
+    ->Task.resolve
   })
 }
 
-let getJob = (buildOrder, pkgInfos) => {
+let getExtends = ((profile, bootstrap)) => {
+  let base = ".conan"
+
+  let triple = profile->Js.String2.split("-")->List.fromArray
+
+  let arch = switch triple {
+  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok("x86_64")
+  | list{_, "armv8", ..._} => Ok("armv8")
+  | _ => Error(`Could not detect image arch for profile: ${profile}`)
+  }
+
+  let end = bootstrap ? "-bootstrap" : ""
+
+  arch->Result.map(arch => [`${base}-${arch}${end}`])
+}
+
+let getJob = (ints: array<conanInstance>, buildOrder) => {
   buildOrder
   ->Array.mapWithIndex((index, group) => {
     group
     ->Array.map(pkg => {
-      let [pkg, revision] = pkg->Js.String2.split("#")
-      let foundPkgs =
-        pkgInfos->Js.Array2.filter(e =>
-          revision == e.info.revision && pkg == e.info.reference ++ "@"
+      let [pkg, pkgRevision] = pkg->Js.String2.split("#")
+      let ints =
+        ints->Js.Array2.filter(({base: {name, version}, revision}) =>
+          pkgRevision == revision && pkg == `${name}/${version}@`
         )
-      foundPkgs
-      ->Array.map(foundPkg => {
-        let {int, profile, mode, hash} = foundPkg
-        {int: int, profile: profile, mode: mode}
-        ->Detect.getExtends
-        ->Result.flatMap(extends => {
-          {int: int, profile: profile, mode: mode}
-          ->getVariables
-          ->Result.map(variables => {
-            name: `${int.name->Option.getExn}/${int.version->Option.getExn}@${hash}`,
-            script: None,
-            image: None,
-            tags: None,
-            variables: Some(variables->Js.Dict.fromArray),
-            extends: Some(extends),
-            needs: switch int.req {
-            | Some(needs) => needs
+      ints
+      ->Array.map(int => {
+        {
+          name: `${int.base.name}/${int.base.version}@${int.hash}`,
+          script: None,
+          image: None,
+          tags: None,
+          variables: Some(int->getVariables->Js.Dict.fromArray),
+          extends: Some(int.extends),
+          needs: int.base.reqs->Array.concat(
+            switch buildOrder[index - 1] {
+            | Some(group) =>
+              group->Array.map(pkg => {
+                let [pkg, ver] = pkg->Js.String2.split("#")
+                pkg ++ "#" ++ ver->String.sub(0, hashLength)
+              })
             | None => []
-            }->Array.concat(
-              switch buildOrder[index - 1] {
-              | Some(group) =>
-                group->Array.map(pkg => {
-                  let [pkg, ver] = pkg->Js.String2.split("#")
-                  pkg ++ "#" ++ ver->String.sub(0, hashLength)
-                })
-              | None => []
-              },
-            ),
-          })
-        })
+            },
+          ),
+        }
       })
       ->Array.concat([
-        Ok({
-          name: pkg ++ "#" ++ revision->String.sub(0, hashLength),
+        {
+          name: pkg ++ "#" ++ pkgRevision->String.sub(0, hashLength),
           script: Some(["echo"]),
           image: None,
           tags: Some(["x86_64"]),
           variables: None,
           extends: None,
-          needs: foundPkgs->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
-        }),
+          needs: ints->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
+        },
       ])
-      ->Seq.result
     })
-    ->Seq.result
-    ->Result.map(Flat.array)
+    ->Flat.array
   })
-  ->Seq.result
-  ->Result.map(Flat.array)
+  ->Flat.array
 }
 
-let getJobs = (zips: array<Instance.zip>) => {
-  let zips = zips->Js.Array2.filter(zip => zip.mode == #conan)
-  let pkgInfos =
-    zips
-    ->init
-    ->TaskResult.map(_ => zips->Array.map((zip, ()) => zip->getInfo)->TaskResult.pool(Sys.cpus))
-    ->TaskResult.flatten
-  let lockfile = pkgInfos->getLockFile
-  Task.all2((pkgInfos, lockfile))->Task.map(((pkgInfos, lockfile)) => {
-    switch (pkgInfos, lockfile) {
-    | (Ok(pkgInfos), Ok(lockfile)) => lockfile->getJob(pkgInfos)
-    | (Error(e), _) => Error(e)
-    | (_, Error(e)) => Error(e)
-    }
+let getConanInstances = (int: Instance.t) => {
+  let {name, version, folder, modeInt} = int
+  let repo = folder->getRepo
+  let args = name->getArgs(modeInt)
+
+  int.profiles->Js.Array2.map(profile => {
+    let extends = (profile, int.bootstrap)->getExtends
+    (extends, repo)
+    ->Seq.result2
+    ->Task.resolve
+    ->TaskResult.flatMap(((extends, repo)) => {
+      let hash = {
+        base: int,
+        repo: repo,
+        args: args,
+        extends: extends,
+        profile: profile,
+        revision: "",
+        hash: "",
+      }->hashN
+      Proc.run(
+        [
+          "conan",
+          "lock",
+          "create",
+          `--ref=${name}/${version}`,
+          `--build=${name}/${version}`,
+          `--lockfile-out=${name}-${version}-${hash}.lock`,
+          `-pr=${profile}`,
+        ]->Array.concat(args),
+      )
+      ->TaskResult.flatMap(_ => {
+        File.read(`${name}-${version}-${hash}.lock`)
+        ->Result.flatMap(lock =>
+          switch lock
+          ->Json.parse
+          ->Json.get("graph_lock")
+          ->Json.get("nodes")
+          ->Json.get("1")
+          ->Json.get("ref") {
+          | Json.String(ref) =>
+            switch (ref->Js.String2.split("#"))[1] {
+            | Some(revision) => Ok(revision)
+            | _ => Error(`Invalid lock file: ${name}-${version}-${hash}.lock`)
+            }
+          | _ => Error(`Invalid lock file: ${name}-${version}-${hash}.lock`)
+          }
+        )
+        ->Task.resolve
+      })
+      ->TaskResult.flatMap(revision => {
+        Ok({
+          base: int,
+          revision: revision,
+          repo: repo,
+          extends: extends,
+          args: args,
+          profile: profile,
+          hash: hash,
+        })->Task.resolve
+      })
+    })
   })
+}
+
+let getJobs = (ints: array<Instance.t>) => {
+  let ints = ints->Js.Array2.filter(int => int.mode == #conan)
+  ints
+  ->init
+  ->TaskResult.flatMap(_ => ints->Array.map(getConanInstances)->Flat.array->TaskResult.seq)
+  ->TaskResult.flatMap(ints =>
+    switch ints->Array.length {
+    | 0 => Ok([])->Task.resolve
+    | _ => ints->getBuildOrder->TaskResult.map(buildOrder => ints->getJob(buildOrder))
+    }
+  )
 }

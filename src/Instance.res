@@ -8,145 +8,163 @@ type opt = {
   val: string,
 }
 
-type t = {
-  name: option<string>,
-  version: option<string>,
-  commit: option<string>,
-  branch: option<string>,
-  folder: option<string>,
-  cmdsPre: option<array<string>>,
-  cmds: option<array<string>>,
-  cmdsPost: option<array<string>>,
-  image: option<string>,
-  tags: option<array<string>>,
-  mode: option<string>,
-  req: option<array<string>>,
-  revReq: option<array<string>>,
-  // Conan
-  profiles: option<array<string>>,
-  settings: option<Js.Dict.t<string>>,
-  options: option<Js.Dict.t<string>>,
-  bootstrap: option<bool>,
-  debugPkg: option<bool>,
-  // Docker
-  conanInstall: option<array<string>>,
-  subdir: option<string>,
-  script: option<array<string>>,
-  tag: option<string>,
-  platform: option<string>,
-  dockerfile: option<string>,
-}
-
-let empty: t = {
-  name: None,
-  version: None,
-  commit: None,
-  branch: None,
-  folder: None,
-  cmdsPre: None,
-  cmds: None,
-  cmdsPost: None,
-  image: None,
-  tags: None,
-  mode: None,
-  req: None,
-  revReq: None,
-  // Conan
-  profiles: None,
-  settings: None,
-  options: None,
-  bootstrap: None,
-  debugPkg: None,
-  // Docker
-  conanInstall: None,
-  subdir: None,
-  script: None,
-  tag: None,
-  platform: None,
-  dockerfile: None,
-}
-
-let validate = (conf: t) =>
-  switch conf.profiles {
-  | Some(profiles) => profiles->Js.Array.length > 0 ? Ok(conf) : Error("Empty profiles")
-  | None => Error("No profiles")
-  }
-
-let create = (folderPath, int: Js.Nullable.t<t>) => {
-  let int = switch Js.Nullable.toOption(int) {
-  | Some(int) => int
-  | None => empty
-  }
-  let int = {
-    ...int,
-    name: switch int.name {
-    | Some(name) => Some(name)
-    | None => Some(Path.basename(folderPath))
-    },
-    commit: switch int.commit {
-    | Some(commit) => Some(commit)
-    | None => Env.get("CI_COMMIT_SHA")
-    },
-    version: switch int.version {
-    | Some(version) => Some(version)
-    | None => Env.get("CI_COMMIT_SHA")
-    },
-    branch: switch int.branch {
-    | Some(branch) => Some(branch)
-    | None => Env.get("CI_COMMIT_REF_NAME")
-    },
-    profiles: switch int.profiles {
-    | Some(profiles) => Some(profiles)
-    | None => Some(["linux-x86_64", "linux-armv8"])
-    },
-    folder: switch int.folder {
-    | Some(folder) => Some(Path.join([folderPath, folder]))
-    | None => Some(folderPath)
-    },
-  }->validate
-  int
-}
-
 type mode = [
   | #conan
   | #docker
   | #command
-  | #"conan-install-tarball"
-  | #"conan-install-script"
 ]
+//| #"conan-install-tarball"
+//| #"conan-install-script"
 
-type zip = {
-  int: t,
-  profile: string,
-  mode: mode
+type t = {
+  name: string,
+  version: string,
+  folder: string,
+  mode: mode,
+  modeInt: Yaml.t,
+  commit: option<string>,
+  branch: option<string>,
+  reqs: array<string>,
+  revReqs: array<string>,
+  bootstrap: bool,
+  profiles: array<string>,
+  cmdsPre: array<string>,
+  cmds: array<string>,
+  cmdsPost: array<string>,
+  image: option<string>,
+  tags: array<string>,
 }
 
 let parseMode = str => {
   switch str {
   | "conan" => #conan
   | "docker" => #docker
-  | "conan-install-tarball" => #"conan-install-tarball"
-  | "conan-install-script" => #"conan-install-script"
   | _ => #command
   }
 }
 
-let getMode = (int: t) => {
-  switch (int.mode, int.folder) {
-  | (Some(mode), _) => parseMode(mode)
-  | (_, Some(folder)) if File.exists(Path.join([folder, "conanfile.py"])) => #conan
-  | (_, Some(folder)) if File.exists(Path.join([folder, "Dockerfile"])) => #docker
-  | (_, _) => #command
+let create = (int: Yaml.t, folderPath): t => {
+  let name = switch int->Yaml.get("name") {
+  | Yaml.String(name) => name
+  | _ => Path.basename(folderPath)
+  }
+  let version = switch (int->Yaml.get("version"), Env.get("CI_COMMIT_SHA")) {
+  | (Yaml.String(version), _) => version
+  | (Yaml.Number(version), _) => version->Float.toString
+  | (_, Some(sha)) => sha
+  | _ => "0.0.0"
+  }
+  let folder = switch int->Yaml.get("folder") {
+  | Yaml.String(folder) => Path.join([folderPath, folder])
+  | _ => folderPath
+  }
+  let mode = switch int->Yaml.get("mode") {
+  | Yaml.String(mode) => parseMode(mode)
+  | _ if File.exists(Path.join([folder, "conanfile.py"])) => #conan
+  | _ if Path.read(folder)->Array.some(file => file.name->Js.String2.includes("Dockerfile")) => #docker
+  | _ => #command
+  }
+  let modeInt = switch mode {
+  | #conan => int->Yaml.get("conan")
+  | #docker => int->Yaml.get("docker")
+  | _ => Yaml.Null
+  }
+  let commit = switch int->Yaml.get("commit") {
+  | Yaml.String(commit) => Some(commit)
+  | _ => Env.get("CI_COMMIT_SHA")
+  }
+  let branch = switch int->Yaml.get("branch") {
+  | Yaml.String(branch) => Some(branch)
+  | _ => Env.get("CI_COMMIT_REF_NAME")
+  }
+  let reqs = switch int->Yaml.get("reqs") {
+  | Yaml.Array(reqs) => reqs->Js.Array2.reduce((reqs, req) =>
+      switch req {
+      | Yaml.String(req) => reqs->Js.Array2.concat([req])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  let revReqs = switch int->Yaml.get("revReqs") {
+  | Yaml.Array(reqs) => reqs->Js.Array2.reduce((reqs, req) =>
+      switch req {
+      | Yaml.String(req) => reqs->Js.Array2.concat([req])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  let bootstrap = switch int->Yaml.get("bootstrap") {
+  | Yaml.Bool(bool) => bool
+  | _ => false
+  }
+  let image = switch int->Yaml.get("image") {
+  | Yaml.String(image) => Some(image)
+  | _ => None
+  }
+  let tags = switch int->Yaml.get("tags") {
+  | Yaml.Array(tags) => tags->Js.Array2.reduce((tags, tag) =>
+      switch tag {
+      | Yaml.String(tag) => tags->Js.Array2.concat([tag])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  let profiles = switch int->Yaml.get("profiles") {
+  | Array(profiles) => profiles->Js.Array2.reduce((array, profile) =>
+      switch profile {
+      | String(profile) => array->Js.Array.concat([profile])
+      | _ => array
+      }
+    , [])
+  | _ => ["linux-x86_64", "linux-armv8"]
+  }
+  let cmdsPre = switch int->Yaml.get("cmdsPre") {
+  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+      switch cmd {
+      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  let cmds = switch int->Yaml.get("cmds") {
+  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+      switch cmd {
+      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  let cmdsPost = switch int->Yaml.get("cmdsPost") {
+  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+      switch cmd {
+      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | _ => []
+      }
+    , [])
+  | _ => []
+  }
+  {
+    name: name,
+    version: version,
+    folder: folder,
+    mode: mode,
+    modeInt: modeInt,
+    commit: commit,
+    branch: branch,
+    reqs: reqs,
+    revReqs: revReqs,
+    bootstrap: bootstrap,
+    cmdsPre: cmdsPre,
+    cmds: cmds,
+    cmdsPost: cmdsPost,
+    profiles: profiles,
+    image: image,
+    tags: tags,
   }
 }
 
-let zip = ints =>
-    ints
-    ->Array.map(int =>
-      switch int.profiles {
-      | Some(profiles) => Ok(profiles->Array.map(profile => {int: int, profile: profile, mode: int->getMode }))
-      | None => Error("No profiles")
-      }
-    )
-    ->Seq.result
-    ->Result.map(Flat.array)

@@ -10,37 +10,19 @@ let findAllInts = recursive => {
     ->Array.map(Config.loadFile)
     ->Seq.result
     ->Result.map(Flat.array)
+    ->Task.resolve
   )
 }
 
 let findReqs = (ints, allInts) => {
-  Task.all2((ints, allInts))->Task.map(((ints, allInts)) => {
-    Seq.result2(ints, allInts)->Result.flatMap(((ints, allInts)) => {
-      let reqs =
-        ints
-        ->Array.map(int =>
-          switch int.req {
-          | Some(req) => req
-          | None => []
-          }
-        )
-        ->Flat.array
-      let reqs = allInts->Js.Array2.filter(int => {
-        switch int.name {
-        | Some(name) => reqs->Js.Array2.includes(name)
-        | None => false
-        } &&
-        !(
-          ints->Array.some(int =>
-            switch int.name {
-            | Some(name) => reqs->Js.Array2.includes(name)
-            | None => false
-            }
-          )
-        )
-      })
-      Ok(ints->Array.concat(reqs))
-    })
+  TaskResult.seq2((ints, allInts))->TaskResult.flatMap(((ints, allInts)) => {
+    let reqs = ints->Array.map(int => int.reqs)->Flat.array
+    let reqs =
+      allInts->Js.Array2.filter(int =>
+        reqs->Js.Array2.includes(int.name) &&
+          !(ints->Array.some(int => reqs->Js.Array2.includes(int.name)))
+      )
+    Ok(ints->Array.concat(reqs))->Task.resolve
   })
 }
 
@@ -67,10 +49,5 @@ let load = () => {
 
   let ints = ints->findReqs(allInts)
 
-  ints
-  ->TaskResult.flatMap(ints => {
-    let zips = ints->Instance.zip
-    zips->Job.load
-  })
-  ->TaskResult.flatten
+  ints->TaskResult.flatMap(Job.load)
 }

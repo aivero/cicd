@@ -1,6 +1,8 @@
 let name = "devops.yml"
 
-type t = option<array<Js.Nullable.t<Instance.t>>>
+//type t = option<array<Js.Nullable.t<Instance.t>>>
+
+//type t = Js.Dict.t<string>
 
 let rec find = dir => {
   let path = Path.join([dir, name])
@@ -11,14 +13,10 @@ let rec find = dir => {
   }
 }
 
-external toConfig: Yaml.t => t = "%identity"
+//external toConfig: Yaml.t => t = "%identity"
 
-let load = (content, path) => {
-  switch content->Yaml.parse->toConfig {
-  | Some(conf) => conf->Array.map(path->Path.dirname->Instance.create)
-  | None => []
-  }
-}
+let load = (content, path) => content->Yaml.parse->Yaml.map(Instance.create(_, path->Path.dirname))
 
-let loadFile = path => path->File.read->Result.flatMap(content => content->load(path)->Seq.result)
+
+let loadFile = (path) => path->File.read->Result.map(v => load(v, path))
   

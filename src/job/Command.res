@@ -1,29 +1,35 @@
 open Instance
 open Job_t
 
-let getJobs = (zips: array<Instance.zip>) => {
-  zips
-  ->Js.Array2.filter(zip => zip.mode == #command)
-  ->Array.map(zip => {
-    zip
-    ->Detect.getImage
-    ->Result.flatMap(image =>
-      switch Seq.option2(zip.int.name, zip.int.cmds) {
-      | Some((name, cmds)) => Ok({
-          name: `${name}-${zip.profile}`,
-          script: Some(cmds),
-          image: Some(image),
-          tags: None,
-          variables: None,
-          extends: None,
-          needs: switch zip.int.req {
-          | Some(needs) => needs->Array.map(need => `${need}-${zip.profile}`)
-          | None => []
-          },
-        })
-      | _ => Error(`${zip.int.name->Option.getExn}: name or cmds not specified`)
-      }
-    )
-  })->Seq.result
+type cmdInstance = {
+  base: Instance.t,
+  profile: string,
+  //extends: array<string>,
+}
+
+let getInstances = (int: Instance.t) => {
+  let image = Some("") //name->Profile.getImage
+  Ok(int.profiles->Array.map(profile => {base: int, profile: profile}))
+}
+
+let getJobs = (ints: array<Instance.t>) => {
+  ints
+  ->Js.Array2.filter(int => int.mode == #command)
+  ->Array.map(getInstances)
+  ->Seq.result
+  ->Result.flatMap(ints => {
+    let ints = ints->Flat.array
+    ints
+    ->Array.map(({base: {name, image, cmds, reqs}, profile}) => Ok({
+      name: `${name}-${profile}`,
+      script: Some(cmds),
+      image: image,
+      tags: None,
+      variables: None,
+      extends: None,
+      needs: reqs->Array.map(need => `${need}-${profile}`),
+    }))
+    ->Seq.result
+  })
   ->Task.resolve
 }

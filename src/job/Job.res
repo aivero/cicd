@@ -16,18 +16,8 @@ let parseMode = str => {
   }
 }
 
-let getMode = (int: Instance.t) => {
-  switch (int.mode, int.folder) {
-  | (Some(mode), _) => parseMode(mode)
-  | (_, Some(folder)) if File.exists(Path.join([folder, "conanfile.py"])) => #conan
-  | (_, Some(folder)) if File.exists(Path.join([folder, "Dockerfile"])) => #docker
-  | (_, _) => #command
-  }
-}
-
 let load = ints => {
-  ints->Result.map(ints => {
-    Task.all([Command.getJobs(ints), Conan.getJobs(ints)])
-    ->Task.map(jobs => jobs->Seq.result->Result.map(Flat.array))
-  })
+  Task.seq(
+    [Command.getJobs, Conan.getJobs, Docker.getJobs]->Array.map(f => ints->f),
+  )->Task.map(jobs => jobs->Seq.result->Result.map(Flat.array))
 }

@@ -15,7 +15,7 @@ let generateJob = (job: Job_t.t) => {
     | None => []
     },
     switch job.extends {
-    | Some(extends) => [`  extends: ${extends}`]
+    | Some(extends) => [`  extends: [${extends->Array.joinWith(", ", a => a)}]`]
     | None => []
     },
     switch job.tags {

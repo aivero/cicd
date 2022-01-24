@@ -1,76 +1,63 @@
 open Job_t
+open Instance
 
-let getJobs = (zips: array<Instance.zip>) => {
-  zips->Array.map(zip => {
-    let int = zip.int
-    let args = int->Conan.getArgs->Array.joinWith(" ", str => str)
-    let tag = switch (int.name, int.tag, int.branch) {
-    | (Some(name), Some(tag), Some(branch)) => `${tag}:${branch}`
-    | (Some(name), _, Some(branch)) =>
-      `ghcr.io/aivero/${name}/${zip.profile->Js.String2.toLowerCase}:${branch}`
+type dockerInstance = {name: string, file: string, folder: string, reqs: array<string>}
+
+let getName = (file, folder) => {
+  switch (file->Js.String2.split("."))[0] {
+  | Some("Dockerfile") => folder->Path.basename
+  | Some(name) => name
+  | _ => folder->Path.basename
+  }
+}
+
+let getInstances = ({name, folder, modeInt, reqs}: Instance.t): array<dockerInstance> => {
+  let file = switch modeInt->Yaml.get("file") {
+  | Yaml.String(file) => Some(file)
+  | _ => None
+  }
+  switch file {
+  | Some(file) => [{name: name, file: file, folder: folder, reqs: reqs}]
+  | None =>
+    Path.read(folder)
+    ->Js.Array2.filter(file => file.name->Js.String2.includes("Dockerfile"))
+    ->Array.map(file => {
+      name: getName(file.name, folder),
+      file: file.name,
+      folder: folder,
+      reqs: reqs,
+    })
+  }
+}
+
+let getJob = ({name, file, folder, reqs}: dockerInstance) => {
+  switch (
+    Env.get("DOCKER_USERNAME"),
+    Env.get("DOCKER_PASSWORD"),
+    Env.get("DOCKER_PREFIX"),
+  )->Seq.option3 {
+  | Some(env) => Ok(env)
+  | None => Error("Username, password or prefix not provided!")
+  }->Result.map(((username, password, prefix)) => {
+    let dockerTag = `${prefix}${name}`
+    let script = [
+      `docker login --username ${username} --password ${password}`,
+      `docker build --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
+      `docker push ${dockerTag}`,
+    ]
+    {
+      name: name,
+      script: Some(script),
+      image: None,
+      tags: None,
+      extends: None,
+      variables: None,
+      needs: reqs,
     }
-    let install = switch (int.folder, int.branch, int.conanInstall) {
-    | (Some(folder), Some(branch), Some(conanInstall)) =>
-      conanInstall->Array.map(pkg => [
-        `mkdir -p ${folder}/install || true`,
-        `conan install ${args}${pkg}/${branch}@ -if ${folder}/install/${pkg}`,
-      ])
-    | _ => []
-    }
-    zip
-    ->Detect.getImage
-    ->Result.map(image =>
-      switch int.cmds {
-      | Some(cmds) =>
-        Ok({
-          name: "foo",
-          script: Some(cmds),
-          image: Some(image),
-          tags: None,
-          extends: None,
-          variables: None,
-          needs: switch zip.int.req {
-          | Some(needs) => needs
-          | None => []
-          },
-        })
-      | None => Error("No commands specified")
-      }
-    )
   })
+}
 
-  /*
-  
-  // Replace prefix and create tarball
-  if (conf.conanInstall) {
-    for (let pkg of conf.conanInstall) {
-      script = script.concat([
-        `sed -i s#PREFIX=.*#PREFIX=/${conf.subdir}/${pkg}# ${conf.folder}/install/${pkg}/${conf.subdir}/dddq_environment.sh`,
-      ]);
-    }
-    script = script.concat([
-      `tar -cvjf ${conf.folder}/${conf.name}-${conf.branch}.tar.bz2 -C ${conf.folder}/install/ ${conf.name}`,
-    ]);
-  }
- */
-
-  /*
-
-
-  if (conf.docker.platform) {
-    payload.docker.platform = conf.docker.platform;
-  } else {
-    payload.docker.platform = this.getDockerPlatform(
-      profile.toLowerCase(),
-    );
-  }
-
-  if (conf.docker.dockerfile) {
-    payload.docker.dockerfile = `${conf.folder}/${conf.docker.dockerfile}`;
-  } else {
-    payload.docker.dockerfile = `${conf.folder}/docker/${profile}.Dockerfile`;
-  }
-
-  return payloads;
- */
+let getJobs = (ints: array<Instance.t>) => {
+  let ints = ints->Array.map(getInstances)->Flat.array
+  ints->Array.map(getJob)->Seq.result->Task.resolve
 }

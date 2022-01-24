@@ -13,25 +13,19 @@ external _asFloat: 'a => float = "%identity"
 external _asArray: 'a => array<t> = "%identity"
 external _asDict: 'a => Js.Dict.t<t> = "%identity"
 
-let rec classify = value => {
+let rec classify = (value) => {
   switch _internalClass(value) {
   | "[object Boolean]" => Bool(_asBool(value))
   | "[object Null]" | "[object Undefined]" => Null
   | "[object String]" => String(_asString(value))
   | "[object Number]" => Number(_asFloat(value))
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
-  | _ =>
-    Object(
-      _asDict(value)
-      ->Js.Dict.entries
-      ->Array.map(((key, val)) => (key, val->classify))
-      ->Js.Dict.fromArray,
-    )
+  | _ => Object(_asDict(value)->Js.Dict.entries->Array.map(((key, val)) => (key, val->classify))->Js.Dict.fromArray)
   }
 }
 
-let get = (yaml: t, key) =>
-  switch yaml {
+let get = (json: t, key) =>
+  switch json {
   | Object(dict) =>
     switch dict->Js.Dict.get(key) {
     | Some(val) => val
@@ -40,11 +34,12 @@ let get = (yaml: t, key) =>
   | _ => Null
   }
 
-let map = (yml, f) =>
-  switch yml {
+let map = (json, f) =>
+  switch json {
   | Array(array) => array->Array.map(f)
   | _ => []
   }
 
-@module("yaml") external _parse: string => t = "parse"
+
+@val external _parse: string => t = "JSON.parse"
 let parse = string => string->_parse->classify

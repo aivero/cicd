@@ -1,7 +1,9 @@
 - version: 1.0.0
-  options:
-    test: True
+  conan:
+    options:
+      test: True
 - version: 1.0.0
-  options:
-    test: False
+  conan:
+    options:
+      test: False
 

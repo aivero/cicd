@@ -1,4 +1,6 @@
-let getImage = ({int, profile}: Instance.zip) => {
+type t = { int: Instance.t, profile: string }
+
+let getImage = ({int, profile}: t) => {
   // Base Conan image
   let base = "aivero/conan:"
 
@@ -17,32 +19,12 @@ let getImage = ({int, profile}: Instance.zip) => {
   | _ => Error(`Could not detect image arch for profile: ${profile}`)
   }
 
-  let end = switch int.bootstrap {
-  | Some(true) => "-bootstrap"
-  | _ => ""
-  }
+  let end = int.bootstrap ? "-bootstrap" : "" 
 
-  Seq.result2(os, arch)->Result.map(((os, arch)) => `${base}${os}-${arch}${end}`) 
+  (os, arch)->Seq.result2->Result.map(((os, arch)) => `${base}${os}-${arch}${end}`) 
 }
 
-let getExtends = ({int, profile}: Instance.zip) => {
-  let base = ".conan"
 
-  let triple = profile->Js.String2.split("-")->List.fromArray;
-
-  let arch = switch triple {
-  | list{_, "x86_64", ..._ } | list{_, "wasm", ..._ } => Ok("x86_64")
-  | list{_, "armv8", ..._ } => Ok("armv8")
-  | _ => Error(`Could not detect image arch for profile: ${profile}`)
-  }
-
-  let end = switch int.bootstrap {
-  | Some(true) => "-bootstrap"
-  | _ => ""
-  }
-
-  arch->Result.map(arch => `${base}-${arch}${end}`)
-}
 
 
 let getRunnerTags = (profile) => {
@@ -72,5 +54,5 @@ let getDockerPlatform = (profile) => {
   | _ => Error(`Could not parse profile ${profile} to an arch.`)
   }
 
-  Seq.result2(os, arch)->Result.map(((os, arch)) => `${os} /${arch}`) 
+  (os, arch)->Seq.result2->Result.map(((os, arch)) => `${os} /${arch}`) 
 };
