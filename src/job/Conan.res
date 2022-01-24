@@ -1,8 +1,6 @@
 open Instance
 open Job_t
 
-@send external toString: 'a => string = "toString"
-
 type conanInstance = {
   base: Instance.t,
   extends: array<string>,
@@ -17,15 +15,6 @@ type conanInfo = {
   revision: string,
   reference: string,
 }
-
-/*
-type pkgInfo = {
-  info: conanInfo,
-  int: Instance.t,
-  profile: string,
-  hash: string,
-}
-*/
 
 let hashLength = 3
 let hashN = Hash.hashN(_, hashLength)
@@ -86,38 +75,6 @@ let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanI
     },
   )
 }
-
-external toConanInfo: 'a => array<conanInfo> = "%identity"
-
-/*
-let getInfo = ({name, version, profile, args, hash}: conanInstance) => {
-  Proc.run(
-    Flat.array([
-      ["conan", "info", "-j", `${name}-${version}-${hash}.json`, `-pr=${profile}`],
-      args,
-      [`${name}/${version}@`],
-    ]),
-  )->TaskResult.flatMap(_ =>
-    File.read(`${name}-${version}-${hash}.json`)->Result.flatMap(output =>
-      switch output->Json.parse {
-      | Json.Array(json) =>
-        json
-        ->Js.Array2.find(e => switch e {
-        | Json.Object(obj) => obj->Js_dict.get("reference") == Some(Json.String(`${name}/${version}`))
-        | _ => false
-        })
-        ->(
-          find =>
-            switch find {
-            | Some(info) => Ok(info)
-            | None => Error(`Couldn't find info for: ${name}/${version} (${profile})`)
-            }
-        )
-      | _ => Error(`Invalid json file: ${name}-${version}-${hash}.json`)
-      }
-    )
-  )
-}*/
 
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
