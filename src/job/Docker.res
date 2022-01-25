@@ -48,7 +48,7 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
     {
       name: name,
       script: Some(script),
-      image: None,
+      image: Some("docker:latest"),
       tags: None,
       extends: None,
       variables: None,
