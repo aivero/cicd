@@ -1,5 +1,5 @@
 generate-config-manual:
-  image: aivero/conan:focal-x86_64
+  image: $CICD_DOCKER_IMAGE
   stage: build
   variables:
     mode: manual
@@ -20,7 +20,7 @@ child-pipeline-manual:
       - artifact: generated-config.yml
         job: generate-config-manual
 generate-config-git:
-  image: aivero/conan:focal-x86_64
+  image: $CICD_DOCKER_IMAGE
   stage: build
   variables:
     mode: git
