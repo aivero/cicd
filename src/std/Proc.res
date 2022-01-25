@@ -15,17 +15,16 @@ type process
 
 let run = cmd => {
   `Running command: ${cmd->Array.joinWith(" ", a => a)}`->Js.Console.log
-  let p = _run({cmd: cmd, stdout: "piped", stderr: "piped"})
-  p
-  ->status
-  ->Task.flatMap(({code}) => {
-		let output = p->output
-		let stderrOutput = p->stderrOutput
-    (code == 0 ? output : stderrOutput)->Task.map(output => {
-      let decoded = Decoder.new()->Decoder.decode(output)
-      code == 0 ? Ok(decoded) : Error(`${decoded} (Exit code: ${code-> Int.toString})`)
-    })
+  let proc = _run({cmd: cmd, stdout: "piped", stderr: "piped"})
+  let status = proc->status
+    let output = proc->output
+    let stderrOutput = proc->stderrOutput
+  (status, output, stderrOutput)->Task.seq3
+  ->Task.map((({code}, output, stderrOutput)) => {
+      let decoder = Decoder.new()
+		  let output = decoder->Decoder.decode(output)
+		  let errOutput = decoder->Decoder.decode(stderrOutput)
+      code == 0 ? Ok(output) : Error(`${errOutput} (Exit code: ${code->Int.toString})`)
   })
 }
 
-@val external exit: int => unit = "Deno.exit"
