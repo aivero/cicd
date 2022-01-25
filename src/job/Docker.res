@@ -32,7 +32,7 @@ let getInstances = ({name, folder, modeInt, reqs}: Instance.t): array<dockerInst
 
 let getJob = ({name, file, folder, reqs}: dockerInstance) => {
   switch (
-    Env.get("DOCKER_USERNAME"),
+    Env.get("DOCKER_USER"),
     Env.get("DOCKER_PASSWORD"),
     Env.get("DOCKER_PREFIX"),
   )->Seq.option3 {
