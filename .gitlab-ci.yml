@@ -1,4 +1,4 @@
-generate-config:
+generate-config-manual:
   image: aivero/conan:focal-x86_64
   stage: build
   variables:
@@ -13,9 +13,29 @@ generate-config:
       - lock.bundle
       - build_order.json
       - "*.lock"
-child-pipeline:
+child-pipeline-manual:
   stage: test
   trigger:
     include:
       - artifact: generated-config.yml
-        job: generate-config
+        job: generate-config-manual
+generate-config-git:
+  image: aivero/conan:focal-x86_64
+  stage: build
+  variables:
+    mode: git
+  script:
+    - deno --version
+    - deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/GenerateConfig.js
+  artifacts:
+    paths:
+      - generated-config.yml 
+      - lock.bundle
+      - build_order.json
+      - "*.lock"
+child-pipeline-git:
+  stage: test
+  trigger:
+    include:
+      - artifact: generated-config.yml
+        job: generate-config-git
