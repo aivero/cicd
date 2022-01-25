@@ -34,14 +34,15 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
   switch (
     Env.get("DOCKER_USER"),
     Env.get("DOCKER_PASSWORD"),
+    Env.get("DOCKER_REGISTRY"),
     Env.get("DOCKER_PREFIX"),
-  )->Seq.option3 {
+  )->Seq.option4 {
   | Some(env) => Ok(env)
   | None => Error("Docker: Username, password or prefix not provided!")
-  }->Result.map(((username, password, prefix)) => {
-    let dockerTag = `${prefix}${name}`
+  }->Result.map(((username, password, registry, prefix)) => {
+    let dockerTag = `${registry}${prefix}${name}`
     let script = [
-      `docker login --username ${username} --password ${password}`,
+      `docker login --username ${username} --password ${password} ${registry}`,
       `docker build --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
       `docker push ${dockerTag}`,
     ]
