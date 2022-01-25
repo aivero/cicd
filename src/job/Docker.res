@@ -41,7 +41,7 @@ let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dock
   }
 }
 
-let getJob = ({name, file, folder, reqs}: dockerInstance) => {
+let getJob = ({name, file, folder, tags, reqs}: dockerInstance) => {
   switch (
     Env.get("DOCKER_USER"),
     Env.get("DOCKER_PASSWORD"),
@@ -62,7 +62,7 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
       script: Some(script),
       image: Some("docker:19.03.12"),
       services: Some(["docker:19.03.12-dind"]),
-      tags: None,
+      tags: Some(tags),
       extends: None,
       variables: None,
       needs: reqs,
