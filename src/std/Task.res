@@ -1,5 +1,4 @@
 type t<+'a> = Js.Promise.t<'a>
-@new external new: (('a => unit) => unit) => t<'a> = "Promise"
 
 type promiseFn<'a, +'b> = 'a => Js.Promise.t<'b>
 
@@ -7,12 +6,22 @@ type promiseFn<'a, +'b> = 'a => Js.Promise.t<'b>
 @scope("Promise") @val external seq2: ((t<'a>, t<'b>)) => t<('a, 'b)> = "all"
 @scope("Promise") @val external seq3: ((t<'a>, t<'b>, t<'c>)) => t<('a, 'b, 'c)> = "all"
 
+
+type error = Js.Promise.error
 let resolve = Js.Promise.resolve
 let reject = Js.Promise.reject
-let catch = (a, f) => Js.Promise.catch(f, a)
+
+@send external toString: 'a => string = "toString"
+@send external catchUnit: (t<'a>, (error => unit)) => t<'a> = "catch"
+let catch = (a, fn) => Js.Promise.catch(fn, a)
+let flatCatch = (a, fn) => a->catch(e => e->fn->resolve)
+let catchExit = (a) => a->catchUnit(e => { `Rejected: ${e->toString}`->Js.Console.log; exit(1)})
+
 let map = (a, fn) => Js.Promise.then_(v => v->fn->resolve, a)
 let flatMap = (a, fn) => Js.Promise.then_(fn, a)
-let catchResolve = (a, fn) => a->catch(e => e->fn->resolve)
+
+@new external new: (('a => unit) => unit) => t<'a> = "Promise"
+@new external newReject: ((('a => unit),('a => unit)) => unit) => t<'a> = "Promise"
 
 let sleep = (a, ms) => a->flatMap(res => (resolve => Js.Global.setTimeout(_ => resolve(res), ms)->ignore)->new)
 
