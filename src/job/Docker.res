@@ -38,7 +38,7 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
     Env.get("DOCKER_PREFIX"),
   )->Seq.option4 {
   | Some(env) => Ok(env)
-  | None => Error("Docker: Username, password or prefix not provided!")
+  | None => Error("Docker: Username, password, registry or prefix not provided!")
   }->Result.map(((username, password, registry, prefix)) => {
     let dockerTag = `${registry}${prefix}${name}`
     let script = [
