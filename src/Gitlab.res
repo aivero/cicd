@@ -23,7 +23,7 @@ let generateJob = (job: Job_t.t) => {
     | None => []
     },
     switch job.services {
-    | Some(services) => [`  services: [${services->Array.joinWith(", ", a => a)}]`]
+    | Some(services) => [`  services: ["${services->Array.joinWith("\", \"", a => a)}"]`]
     | None => []
     },
     switch job.variables {
