@@ -22,7 +22,7 @@ let rec classify = value => {
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
   | _ =>
     Object(
-      _asDict(value)->Dict.entries->Array.map(((key, val)) => (key, val->classify))->Dict.fromArray,
+      _asDict(value)->Dict.map(((key, val)) => (key, val->classify))->Dict.fromArray,
     )
   }
 }

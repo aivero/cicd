@@ -27,9 +27,7 @@ let getArgs = (name, int: Yaml.t) => {
 
   let sets = switch int->Yaml.get("settings") {
   | Yaml.Object(sets) =>
-    sets
-    ->Dict.entries
-    ->Array.map(((key, val)) =>
+    sets->Dict.map(((key, val)) =>
       switch val {
       | Yaml.Bool(true) => (key, "True")
       | Yaml.Bool(false) => (key, "False")
@@ -41,9 +39,7 @@ let getArgs = (name, int: Yaml.t) => {
 
   let opts = switch int->Yaml.get("options") {
   | Yaml.Object(opts) =>
-    opts
-    ->Dict.entries
-    ->Array.map(((key, val)) =>
+    opts->Dict.map(((key, val)) =>
       switch val {
       | Yaml.Bool(true) => (key, "True")
       | Yaml.Bool(false) => (key, "False")

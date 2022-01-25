@@ -31,7 +31,7 @@ let generateJob = (job: Job_t.t) => {
     switch job.variables {
     | Some(vars) =>
       ["  variables:"]->Array.concat(
-        vars->Dict.entries->Array.map(((key, val)) => `    ${key}: "${val}"`),
+        vars->Dict.map(((key, val)) => `    ${key}: "${val}"`),
       )
     | None => []
     },
