@@ -43,7 +43,7 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
     let dockerTag = `${registry}${prefix}${name}`
     let script = [
       `docker login --username ${username} --password ${password} ${registry}`,
-      `docker build . --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
+      `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
       `docker push ${dockerTag}`,
     ]
     {
