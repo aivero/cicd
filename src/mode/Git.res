@@ -27,26 +27,24 @@ let handleConfigChange = confPath => {
         conf->Config.load(confPath)
       )
     )
+
   let lastRev = getLastRev()
   let filesOld = lastRev->TaskResult.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
 
   (intsNew, intsOld, filesOld)
-  ->Task.seq3
-  ->Task.map(((intsNew, intsOld, filesOld)) => {
-    switch (intsNew, intsOld, filesOld)->Seq.result3 {
-    | Ok((intsNew, intsOld, filesOld)) if filesOld->Js.String2.includes(confPath) =>
-      Ok(intsNew->cmpInts(intsOld))
-    | Error(err) => Error(err)
-    }
+  ->TaskResult.seq3
+  ->TaskResult.flatMap(((intsNew, intsOld, filesOld)) => {
+    Ok(filesOld->Js.String2.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->Task.resolve
   })
 }
 
 let handleFileChange = (confPath, filePath) => {
-  switch confPath->Config.loadFile {
-  | Ok(ints) =>
-    Ok(ints->Js.Array2.filter(({folder}) => folder->Js.String2.endsWith(filePath->Path.dirname)))
-  | Error(err) => Error(err)
-  }->Task.resolve
+  confPath
+  ->Config.loadFile
+  ->Result.map(ints =>
+    ints->Js.Array2.filter(({folder}) => folder->Js.String2.endsWith(filePath->Path.dirname))
+  )
+  ->Task.resolve
 }
 
 let handleChange = file => {
