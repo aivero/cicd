@@ -8,9 +8,9 @@ let main = () => {
         "Ok"->Js.Console.log
       }
     | Error(e) => {
-      `Error: ${e->toString}`->Js.Console.log
-      Proc.exit(1)
-    } 
+        `Error: ${e->toString}`->Js.Console.log
+        Sys.exit(1)
+      }
     }
   )
 }
