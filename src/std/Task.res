@@ -5,6 +5,7 @@ type promiseFn<'a, +'b> = 'a => Js.Promise.t<'b>
 @scope("Promise") @val external seq: array<t<'a>> => t<array<'a>> = "all"
 @scope("Promise") @val external seq2: ((t<'a>, t<'b>)) => t<('a, 'b)> = "all"
 @scope("Promise") @val external seq3: ((t<'a>, t<'b>, t<'c>)) => t<('a, 'b, 'c)> = "all"
+@scope("Promise") @val external seq4: ((t<'a>, t<'b>, t<'c>, t<'d>)) => t<('a, 'b, 'c, 'd)> = "all"
 
 
 type error = Js.Promise.error

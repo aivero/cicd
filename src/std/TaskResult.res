@@ -42,3 +42,6 @@ let seq2 = ((a1: t<'a, 'error>, a2: t<'b, 'error>)) => (a1, a2)->Task.seq2->Task
 
 let seq3 = ((a1: t<'a, 'error>, a2: t<'b, 'error>, a3: t<'c, 'error>)) =>
   (a1, a2, a3)->Task.seq3->Task.map(Seq.result3)
+
+let seq4 = ((a1: t<'a, 'error>, a2: t<'b, 'error>, a3: t<'c, 'error>, a4: t<'d, 'error>)) =>
+  (a1, a2, a3, a4)->Task.seq4->Task.map(Seq.result4)
