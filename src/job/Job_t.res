@@ -6,6 +6,7 @@ type t = {
   image: option<string>,
   tags: option<array<string>>,
   script: option<array<string>>,
-  needs: array<string>
+  needs: array<string>,
+  services: option<array<string>>
   //mode: JobMode;
 }

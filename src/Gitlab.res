@@ -22,6 +22,10 @@ let generateJob = (job: Job_t.t) => {
     | Some(tags) => [`  tags: [${tags->Array.joinWith(", ", a => a)}]`]
     | None => []
     },
+    switch job.services {
+    | Some(services) => [`  services: [${services->Array.joinWith(", ", a => a)}]`]
+    | None => []
+    },
     switch job.variables {
     | Some(vars) => ["  variables:"]->Array.concat(vars->Js.Dict.entries->Array.map(((key, val)) => `    ${key}: "${val}"`))
     | None => []
@@ -84,7 +88,7 @@ let generate = (jobs: array<Job_t.t>) => {
   let jobs =
     jobs->Array.length > 0
       ? jobs
-      : [{name: "empty", needs: [], script: Some(["echo"]), image: None, tags: Some(["x86_64"]), extends: None, variables: None}]
+      : [{name: "empty", needs: [], script: Some(["echo"]), image: None, services: None, tags: Some(["x86_64"]), extends: None, variables: None}]
 
   jobs
   ->Array.map(generateJob)

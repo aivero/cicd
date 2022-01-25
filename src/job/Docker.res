@@ -48,7 +48,8 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
     {
       name: name,
       script: Some(script),
-      image: Some("docker:dind"),
+      image: Some("docker:19.03.12"),
+      services: Some(["docker:19.03.12-dind"]),
       tags: None,
       extends: None,
       variables: None,

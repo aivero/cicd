@@ -27,6 +27,7 @@ let getJobs = (ints: array<Instance.t>) => {
       tags: None,
       variables: None,
       extends: None,
+      services: None,
       needs: reqs->Array.map(need => `${need}-${profile}`),
     }))
     ->Seq.result
