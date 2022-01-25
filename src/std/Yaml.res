@@ -1,7 +1,7 @@
 type rec t =
-  | String(Js_string.t)
+  | String(string)
   | Number(float)
-  | Object(Js_dict.t<t>)
+  | Object(Dict.t<t>)
   | Array(array<t>)
   | Bool(bool)
   | Null
