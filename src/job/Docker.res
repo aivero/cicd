@@ -1,7 +1,13 @@
 open Job_t
 open Instance
 
-type dockerInstance = {name: string, file: string, folder: string, reqs: array<string>}
+type dockerInstance = {
+  name: string,
+  file: string,
+  folder: string,
+  tags: array<string>,
+  reqs: array<string>,
+}
 
 let getName = (file, folder) => {
   switch (file->String.split("."))[0] {
@@ -11,13 +17,17 @@ let getName = (file, folder) => {
   }
 }
 
-let getInstances = ({name, folder, modeInt, reqs}: Instance.t): array<dockerInstance> => {
+let getTags = name => {
+  name->String.includes("armv8") ? ["x86_64", "aws"] : ["armv8", "aws"]
+}
+
+let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
   }
   switch file {
-  | Some(file) => [{name: name, file: file, folder: folder, reqs: reqs}]
+  | Some(file) => [{name: name, file: file, folder: folder, tags: tags, reqs: reqs}]
   | None =>
     Path.read(folder)
     ->Array.filter(file => file.name->String.includes("Dockerfile"))
@@ -25,6 +35,7 @@ let getInstances = ({name, folder, modeInt, reqs}: Instance.t): array<dockerInst
       name: getName(file.name, folder),
       file: file.name,
       folder: folder,
+      tags: name->getTags,
       reqs: reqs,
     })
   }
