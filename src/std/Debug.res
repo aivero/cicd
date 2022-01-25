@@ -1,4 +1,4 @@
 let print = val => {
-  val->Js.Console.log
+  val->Console.log
   val
 }

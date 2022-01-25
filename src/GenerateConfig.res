@@ -5,10 +5,10 @@ let main = () => {
     switch res {
     | Ok(val) => {
         val->Gitlab.generate
-        "Ok"->Js.Console.log
+        "Ok"->Console.log
       }
     | Error(e) => {
-        `Error: ${e->toString}`->Js.Console.log
+        `Error: ${e->toString}`->Console.log
         Sys.exit(1)
       }
     }

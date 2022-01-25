@@ -4,7 +4,7 @@ open Instance
 type dockerInstance = {name: string, file: string, folder: string, reqs: array<string>}
 
 let getName = (file, folder) => {
-  switch (file->Js.String2.split("."))[0] {
+  switch (file->String.split("."))[0] {
   | Some("Dockerfile") => folder->Path.basename
   | Some(name) => name
   | _ => folder->Path.basename
@@ -20,7 +20,7 @@ let getInstances = ({name, folder, modeInt, reqs}: Instance.t): array<dockerInst
   | Some(file) => [{name: name, file: file, folder: folder, reqs: reqs}]
   | None =>
     Path.read(folder)
-    ->Js.Array2.filter(file => file.name->Js.String2.includes("Dockerfile"))
+    ->Array.filter(file => file.name->String.includes("Dockerfile"))
     ->Array.map(file => {
       name: getName(file.name, folder),
       file: file.name,
@@ -36,7 +36,7 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
     Env.get("DOCKER_PASSWORD"),
     Env.get("DOCKER_REGISTRY"),
     Env.get("DOCKER_PREFIX"),
-  )->Seq.option4 {
+  )->Option.seq4 {
   | Some(env) => Ok(env)
   | None => Error("Docker: Username, password, registry or prefix not provided!")
   }->Result.map(((username, password, registry, prefix)) => {
@@ -60,6 +60,6 @@ let getJob = ({name, file, folder, reqs}: dockerInstance) => {
 }
 
 let getJobs = (ints: array<Instance.t>) => {
-  let ints = ints->Array.map(getInstances)->Flat.array
-  ints->Array.map(getJob)->Seq.result->Task.resolve
+  let ints = ints->Array.flatMap(getInstances)
+  ints->Array.map(getJob)->Result.seq->Task.resolve
 }

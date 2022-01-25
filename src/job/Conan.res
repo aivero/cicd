@@ -21,14 +21,14 @@ let hashN = Hash.hashN(_, hashLength)
 
 let getArgs = (name, int: Yaml.t) => {
   let args = switch Env.get("args") {
-  | Some(args) => args->Js.String2.split(" ")
+  | Some(args) => args->String.split(" ")
   | None => []
   }
 
   let sets = switch int->Yaml.get("settings") {
   | Yaml.Object(sets) =>
     sets
-    ->Js.Dict.entries
+    ->Dict.entries
     ->Array.map(((key, val)) =>
       switch val {
       | Yaml.Bool(true) => (key, "True")
@@ -42,7 +42,7 @@ let getArgs = (name, int: Yaml.t) => {
   let opts = switch int->Yaml.get("options") {
   | Yaml.Object(opts) =>
     opts
-    ->Js.Dict.entries
+    ->Dict.entries
     ->Array.map(((key, val)) =>
       switch val {
       | Yaml.Bool(true) => (key, "True")
@@ -53,7 +53,7 @@ let getArgs = (name, int: Yaml.t) => {
   | _ => []
   }->Array.map(((key, val)) => `-o ${name}:${key}=${val}`)
 
-  Flat.array([args, sets, opts])
+  [args, sets, opts]->Array.flatten
 }
 
 let getRepo = folder => {
@@ -61,15 +61,15 @@ let getRepo = folder => {
   ->Path.join
   ->File.read
   ->Result.map(content =>
-    content->Js.String2.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_PUBLIC"
+    content->String.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_PUBLIC"
   )
 }
 
 let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanInstance) => {
   [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
-  ->Array.concat(args->Array.length > 0 ? [("ARGS", args->Array.joinWith(" ", str => str))] : [])
+  ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
-    switch version->Js.String2.match_(%re("/^[0-9a-f]{40}$/")) {
+    switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => [("UPLOAD_ALIAS", "1")]
     | _ => []
     },
@@ -79,14 +79,14 @@ let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanI
 @send external toLockfile: 'a => array<array<string>> = "%identity"
 
 let init = (ints: array<Instance.t>) => {
-  let exportPkgs = ints->Js.Array2.reduce((pkgs, {name, version, folder}) => {
+  let exportPkgs = ints->Array.reduce((pkgs, {name, version, folder}) => {
     pkgs->Array.some(pkg => pkg == (`${name}/${version}@`, folder))
       ? pkgs
       : pkgs->Array.concat([(`${name}/${version}@`, folder)])
   }, [])
 
   let config =
-    switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR"))->Seq.option2 {
+    switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR"))->Option.seq2 {
     | Some(url, dir) => Ok((url, dir))
     | _ => Error("Conan config url or dir not defined")
     }
@@ -99,7 +99,7 @@ let init = (ints: array<Instance.t>) => {
       Env.get("CONAN_LOGIN_USERNAME"),
       Env.get("CONAN_LOGIN_PASSWORD"),
       Env.get("CONAN_REPO_ALL"),
-    ]->Seq.option {
+    ]->Option.seq {
     | Some([user, passwd, repo]) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
     | _ => Error("Conan login, password or repo not defined")->Task.resolve
     }
@@ -115,13 +115,13 @@ let init = (ints: array<Instance.t>) => {
 
 let getBuildOrder = (ints: array<conanInstance>) => {
   let locks = ints->Array.map(({base: {name, version}, hash}) => `${name}-${version}-${hash}.lock`)
-  locks->Js.Console.log
+  locks->Console.log
   let bundle =
-    locks->Array.length > 0
-      ? Proc.run(
+    locks->Array.empty
+      ? Ok("")->Task.resolve
+      : Proc.run(
           ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
         )
-      : Ok("")->Task.resolve
   bundle
   ->TaskResult.flatMap(_ => {
     Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
@@ -136,7 +136,7 @@ let getBuildOrder = (ints: array<conanInstance>) => {
 let getExtends = ((profile, bootstrap)) => {
   let base = ".conan"
 
-  let triple = profile->Js.String2.split("-")->List.fromArray
+  let triple = profile->String.split("-")->List.fromArray
 
   let arch = switch triple {
   | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok("x86_64")
@@ -150,13 +150,11 @@ let getExtends = ((profile, bootstrap)) => {
 }
 
 let getJob = (ints: array<conanInstance>, buildOrder) => {
-  buildOrder
-  ->Array.mapWithIndex((index, group) => {
-    group
-    ->Array.map(pkg => {
-      let [pkg, pkgRevision] = pkg->Js.String2.split("#")
+  buildOrder->Array.flatMapWithIndex((index, group) => {
+    group->Array.flatMap(pkg => {
+      let [pkg, pkgRevision] = pkg->String.split("#")
       let ints =
-        ints->Js.Array2.filter(({base: {name, version}, revision}) =>
+        ints->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}@`
         )
       ints
@@ -167,13 +165,13 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           image: None,
           services: None,
           tags: None,
-          variables: Some(int->getVariables->Js.Dict.fromArray),
+          variables: Some(int->getVariables->Dict.fromArray),
           extends: Some(int.extends),
           needs: int.base.reqs->Array.concat(
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
-                let [pkg, ver] = pkg->Js.String2.split("#")
+                let [pkg, ver] = pkg->String.split("#")
                 pkg ++ "#" ++ ver->String.sub(0, hashLength)
               })
             | None => []
@@ -194,9 +192,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
         },
       ])
     })
-    ->Flat.array
   })
-  ->Flat.array
 }
 
 let getConanInstances = (int: Instance.t) => {
@@ -204,10 +200,10 @@ let getConanInstances = (int: Instance.t) => {
   let repo = folder->getRepo
   let args = name->getArgs(modeInt)
 
-  int.profiles->Js.Array2.map(profile => {
+  int.profiles->Array.map(profile => {
     let extends = (profile, int.bootstrap)->getExtends
     (extends, repo)
-    ->Seq.result2
+    ->Result.seq2
     ->Task.resolve
     ->TaskResult.flatMap(((extends, repo)) => {
       let hash = {
@@ -240,7 +236,7 @@ let getConanInstances = (int: Instance.t) => {
           ->Json.get("1")
           ->Json.get("ref") {
           | Json.String(ref) =>
-            switch (ref->Js.String2.split("#"))[1] {
+            switch (ref->String.split("#"))[1] {
             | Some(revision) => Ok(revision)
             | _ => Error(`Invalid lock file: ${name}-${version}-${hash}.lock`)
             }
@@ -265,10 +261,10 @@ let getConanInstances = (int: Instance.t) => {
 }
 
 let getJobs = (ints: array<Instance.t>) => {
-  let ints = ints->Js.Array2.filter(int => int.mode == #conan)
+  let ints = ints->Array.filter(int => int.mode == #conan)
   ints
   ->init
-  ->TaskResult.flatMap(_ => ints->Array.map(getConanInstances)->Flat.array->TaskResult.seq)
+  ->TaskResult.flatMap(_ => ints->Array.flatMap(getConanInstances)->TaskResult.seq)
   ->TaskResult.flatMap(ints =>
     switch ints->Array.length {
     | 0 => Ok([])->Task.resolve

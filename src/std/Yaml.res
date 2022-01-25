@@ -11,7 +11,7 @@ external _asBool: 'a => bool = "%identity"
 external _asString: 'a => string = "%identity"
 external _asFloat: 'a => float = "%identity"
 external _asArray: 'a => array<t> = "%identity"
-external _asDict: 'a => Js.Dict.t<t> = "%identity"
+external _asDict: 'a => Dict.t<t> = "%identity"
 
 let rec classify = value => {
   switch _internalClass(value) {
@@ -22,10 +22,7 @@ let rec classify = value => {
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
   | _ =>
     Object(
-      _asDict(value)
-      ->Js.Dict.entries
-      ->Array.map(((key, val)) => (key, val->classify))
-      ->Js.Dict.fromArray,
+      _asDict(value)->Dict.entries->Array.map(((key, val)) => (key, val->classify))->Dict.fromArray,
     )
   }
 }
@@ -33,7 +30,7 @@ let rec classify = value => {
 let get = (yaml: t, key) =>
   switch yaml {
   | Object(dict) =>
-    switch dict->Js.Dict.get(key) {
+    switch dict->Dict.get(key) {
     | Some(val) => val
     | None => Null
     }

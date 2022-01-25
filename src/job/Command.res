@@ -4,7 +4,6 @@ open Job_t
 type cmdInstance = {
   base: Instance.t,
   profile: string,
-  //extends: array<string>,
 }
 
 let getInstances = (int: Instance.t) => {
@@ -14,11 +13,11 @@ let getInstances = (int: Instance.t) => {
 
 let getJobs = (ints: array<Instance.t>) => {
   ints
-  ->Js.Array2.filter(int => int.mode == #command)
+  ->Array.filter(int => int.mode == #command)
   ->Array.map(getInstances)
-  ->Seq.result
+  ->Result.seq
   ->Result.flatMap(ints => {
-    let ints = ints->Flat.array
+    let ints = ints->Array.flatten
     ints
     ->Array.map(({base: {name, image, cmds, reqs}, profile}) => Ok({
       name: `${name}-${profile}`,
@@ -30,7 +29,7 @@ let getJobs = (ints: array<Instance.t>) => {
       services: None,
       needs: reqs->Array.map(need => `${need}-${profile}`),
     }))
-    ->Seq.result
+    ->Result.seq
   })
   ->Task.resolve
 }

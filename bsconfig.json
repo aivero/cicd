@@ -1,10 +1,9 @@
 {
-  "name": "rescript-deno",
+  "name": "cicd",
   "version": "0.1.0",
   "sources": {
     "dir": "src",
     "subdirs": true
   },
-  "package-specs": "es6-global",
-  "bsc-flags": ["-open Belt"] 
+  "package-specs": "es6-global"
 }

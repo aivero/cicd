@@ -1,6 +1,6 @@
 let filter = (ints: array<Instance.t>, comps) => {
-  ints->Js.Array2.filter(({name, version}) => {
-    comps->Js.Array2.some(comp =>
+  ints->Array.filter(({name, version}) => {
+    comps->Array.some(comp =>
       switch (comp[0], comp[1]) {
       | (Some("*"), Some("*")) => true
       | (Some("*"), Some(cversion)) => cversion == version
@@ -10,10 +10,10 @@ let filter = (ints: array<Instance.t>, comps) => {
       }
     ) &&
       !(
-        comps->Js.Array2.some(comp =>
+        comps->Array.some(comp =>
           switch comp[0] {
-          | Some(cname) if cname->Js.String2.startsWith("-") =>
-            cname->Js.String2.sliceToEnd(~from=1) == name
+          | Some(cname) if cname->String.startsWith("-") =>
+            cname->String.sliceToEnd(~from=1) == name
           | _ => false
           }
         )
@@ -22,11 +22,11 @@ let filter = (ints: array<Instance.t>, comps) => {
 }
 
 let findInts = allInts => {
-  Js.Console.log("Manual Mode: Create instances from manual args")
+  Console.log("Manual Mode: Create instances from manual args")
   let comps = switch Env.get("component") {
   | Some(comps) => {
-      `Building components: ${comps}`->Js.Console.log
-      comps->Js.String2.split(",")->Array.map(comp => comp->Js.String2.split("/"))
+      `Building components: ${comps}`->Console.log
+      comps->String.split(",")->Array.map(comp => comp->String.split("/"))
     }
   | None => []
   }

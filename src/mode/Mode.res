@@ -2,25 +2,24 @@ open Instance
 
 let findAllInts = recursive => {
   let cmd =
-    ["git", "ls-files", "**devops.yml"]->Js.Array2.concat(recursive ? ["--recurse-submodules"] : [])
+    ["git", "ls-files", "**devops.yml"]->Array.concat(recursive ? ["--recurse-submodules"] : [])
   Proc.run(cmd)->TaskResult.flatMap(e =>
     e
-    ->Js.String2.trim
-    ->Js.String2.split("\n")
+    ->String.trim
+    ->String.split("\n")
     ->Array.map(Config.loadFile)
-    ->Seq.result
-    ->Result.map(Flat.array)
+    ->Result.seq
+    ->Result.map(Array.flatten)
     ->Task.resolve
   )
 }
 
 let findReqs = (ints, allInts) => {
   TaskResult.seq2((ints, allInts))->TaskResult.flatMap(((ints, allInts)) => {
-    let reqs = ints->Array.map(int => int.reqs)->Flat.array
+    let reqs = ints->Array.flatMap(int => int.reqs)
     let reqs =
-      allInts->Js.Array2.filter(int =>
-        reqs->Js.Array2.includes(int.name) &&
-          !(ints->Array.some(int => reqs->Js.Array2.includes(int.name)))
+      allInts->Array.filter(int =>
+        reqs->Array.includes(int.name) && !(ints->Array.some(int => reqs->Array.includes(int.name)))
       )
     Ok(ints->Array.concat(reqs))->Task.resolve
   })

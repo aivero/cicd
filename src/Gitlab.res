@@ -1,3 +1,5 @@
+open Job_t
+
 let rec chunk = (array, size) => {
   let cur = array->Array.slice(~offset=0, ~len=size)
   let rest = array->Array.slice(~offset=size, ~len=array->Array.length - size)
@@ -8,26 +10,29 @@ let rec chunk = (array, size) => {
 }
 
 let generateJob = (job: Job_t.t) => {
-  Flat.array([
-    [`${job.name}:`, `  needs: [${job.needs->Array.joinWith(", ", a => a)}]`],
+  Array.flatten([
+    [`${job.name}:`, `  needs: [${job.needs->Array.join(", ")}]`],
     switch job.image {
     | Some(image) => [`  image: ${image}`]
     | None => []
     },
     switch job.extends {
-    | Some(extends) => [`  extends: [${extends->Array.joinWith(", ", a => a)}]`]
+    | Some(extends) => [`  extends: [${extends->Array.join(", ")}]`]
     | None => []
     },
     switch job.tags {
-    | Some(tags) => [`  tags: [${tags->Array.joinWith(", ", a => a)}]`]
+    | Some(tags) => [`  tags: [${tags->Array.join(", ")}]`]
     | None => []
     },
     switch job.services {
-    | Some(services) => [`  services: ["${services->Array.joinWith("\", \"", a => a)}"]`]
+    | Some(services) => [`  services: ["${services->Array.join("\", \"")}"]`]
     | None => []
     },
     switch job.variables {
-    | Some(vars) => ["  variables:"]->Array.concat(vars->Js.Dict.entries->Array.map(((key, val)) => `    ${key}: "${val}"`))
+    | Some(vars) =>
+      ["  variables:"]->Array.concat(
+        vars->Dict.entries->Array.map(((key, val)) => `    ${key}: "${val}"`),
+      )
     | None => []
     },
     switch job.script {
@@ -86,14 +91,24 @@ let base = `
 let generate = (jobs: array<Job_t.t>) => {
   let encode = Encoder.new()->Encoder.encode
   let jobs =
-    jobs->Array.length > 0
-      ? jobs
-      : [{name: "empty", needs: [], script: Some(["echo"]), image: None, services: None, tags: Some(["x86_64"]), extends: None, variables: None}]
+    jobs->Array.empty
+      ? [
+          {
+            name: "empty",
+            needs: [],
+            script: Some(["echo"]),
+            image: None,
+            services: None,
+            tags: Some(["x86_64"]),
+            extends: None,
+            variables: None,
+          },
+        ]
+      : jobs
 
   jobs
-  ->Array.map(generateJob)
-  ->Flat.array
-  ->Array.joinWith("\n", a => a)
+  ->Array.flatMap(generateJob)
+  ->Array.join("\n")
   ->(conf => base ++ conf)
   ->encode
   ->File.write("generated-config.yml")

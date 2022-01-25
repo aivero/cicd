@@ -61,7 +61,7 @@ let create = (int: Yaml.t, folderPath): t => {
   let mode = switch int->Yaml.get("mode") {
   | Yaml.String(mode) => parseMode(mode)
   | _ if File.exists(Path.join([folder, "conanfile.py"])) => #conan
-  | _ if Path.read(folder)->Array.some(file => file.name->Js.String2.includes("Dockerfile")) => #docker
+  | _ if Path.read(folder)->Array.some(file => file.name->String.includes("Dockerfile")) => #docker
   | _ => #command
   }
   let modeInt = switch mode {
@@ -78,18 +78,18 @@ let create = (int: Yaml.t, folderPath): t => {
   | _ => Env.get("CI_COMMIT_REF_NAME")
   }
   let reqs = switch int->Yaml.get("reqs") {
-  | Yaml.Array(reqs) => reqs->Js.Array2.reduce((reqs, req) =>
+  | Yaml.Array(reqs) => reqs->Array.reduce((reqs, req) =>
       switch req {
-      | Yaml.String(req) => reqs->Js.Array2.concat([req])
+      | Yaml.String(req) => reqs->Array.concat([req])
       | _ => []
       }
     , [])
   | _ => []
   }
   let revReqs = switch int->Yaml.get("revReqs") {
-  | Yaml.Array(reqs) => reqs->Js.Array2.reduce((reqs, req) =>
+  | Yaml.Array(reqs) => reqs->Array.reduce((reqs, req) =>
       switch req {
-      | Yaml.String(req) => reqs->Js.Array2.concat([req])
+      | Yaml.String(req) => reqs->Array.concat([req])
       | _ => []
       }
     , [])
@@ -104,45 +104,45 @@ let create = (int: Yaml.t, folderPath): t => {
   | _ => None
   }
   let tags = switch int->Yaml.get("tags") {
-  | Yaml.Array(tags) => tags->Js.Array2.reduce((tags, tag) =>
+  | Yaml.Array(tags) => tags->Array.reduce((tags, tag) =>
       switch tag {
-      | Yaml.String(tag) => tags->Js.Array2.concat([tag])
+      | Yaml.String(tag) => tags->Array.concat([tag])
       | _ => []
       }
     , [])
   | _ => []
   }
   let profiles = switch int->Yaml.get("profiles") {
-  | Array(profiles) => profiles->Js.Array2.reduce((array, profile) =>
+  | Array(profiles) => profiles->Array.reduce((array, profile) =>
       switch profile {
-      | String(profile) => array->Js.Array.concat([profile])
+      | String(profile) => array->Array.concat([profile])
       | _ => array
       }
     , [])
   | _ => ["linux-x86_64", "linux-armv8"]
   }
   let cmdsPre = switch int->Yaml.get("cmdsPre") {
-  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+  | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
-      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
   | _ => []
   }
   let cmds = switch int->Yaml.get("cmds") {
-  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+  | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
-      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
   | _ => []
   }
   let cmdsPost = switch int->Yaml.get("cmdsPost") {
-  | Yaml.Array(cmds) => cmds->Js.Array2.reduce((cmds, cmd) =>
+  | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
-      | Yaml.String(cmd) => cmds->Js.Array2.concat([cmd])
+      | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
@@ -167,4 +167,3 @@ let create = (int: Yaml.t, folderPath): t => {
     tags: tags,
   }
 }
-

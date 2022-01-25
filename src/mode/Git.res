@@ -3,9 +3,7 @@ let getLastRev = () =>
   | Some("0000000000000000000000000000000000000000") =>
     switch Env.get("CI_DEFAULT_BRANCH") {
     | Some(def_branch) =>
-      Proc.run(["git", "merge-base", "HEAD", `origin/${def_branch}`])->TaskResult.map(
-        Js.String2.trim,
-      )
+      Proc.run(["git", "merge-base", "HEAD", `origin/${def_branch}`])->TaskResult.map(String.trim)
     | None => Error("CI_COMMIT_REF_NAME or CI_DEFAULT_BRANCH not set")->Task.resolve
     }
   | Some(val) => Ok(val)->Task.resolve
@@ -14,7 +12,7 @@ let getLastRev = () =>
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
   let hashsOld = intsOld->Array.map(Hash.hash)
-  intsNew->Js.Array2.filter(intNew => !(hashsOld->Js.Array2.includes(intNew->Hash.hash)))
+  intsNew->Array.filter(intNew => !(hashsOld->Array.includes(intNew->Hash.hash)))
 }
 
 let handleConfigChange = confPath => {
@@ -34,7 +32,7 @@ let handleConfigChange = confPath => {
   (intsNew, intsOld, filesOld)
   ->TaskResult.seq3
   ->TaskResult.flatMap(((intsNew, intsOld, filesOld)) => {
-    Ok(filesOld->Js.String2.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->Task.resolve
+    Ok(filesOld->String.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->Task.resolve
   })
 }
 
@@ -42,7 +40,7 @@ let handleFileChange = (confPath, filePath) => {
   confPath
   ->Config.loadFile
   ->Result.map(ints =>
-    ints->Js.Array2.filter(({folder}) => folder->Js.String2.endsWith(filePath->Path.dirname))
+    ints->Array.filter(({folder}) => folder->String.endsWith(filePath->Path.dirname))
   )
   ->Task.resolve
 }
@@ -57,32 +55,32 @@ let handleChange = file => {
 }
 
 let findInts = () => {
-  Js.Console.log("Git Mode: Create instances from changed files in git")
+  Console.log("Git Mode: Create instances from changed files in git")
   let lastRev = getLastRev()
   lastRev
   ->TaskResult.flatMap(lastRev => {
-    Js.Console.log(`Last revision: ${lastRev}`)
+    Console.log(`Last revision: ${lastRev}`)
     Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
   })
   ->TaskResult.flatMap(output => {
     output
-    ->Js.String2.trim
-    ->Js.String2.split("\n")
-    ->Js.Array2.filter(File.exists)
-    ->Js.Array2.reduce((a, file) => {
+    ->String.trim
+    ->String.split("\n")
+    ->Array.filter(File.exists)
+    ->Array.reduce((a, file) => {
       a->Array.concat(file->handleChange)
     }, [])
     ->Task.seq
     ->Task.map(tasks =>
       tasks
-      ->Seq.result
+      ->Result.seq
       ->Result.map(confs => {
-        let ints = confs->Flat.array
-        let (_, ints) = ints->Js.Array2.reduce(((intsHash, ints), int) => {
+        let ints = confs->Array.flatten
+        let (_, ints) = ints->Array.reduce(((intsHash, ints), int) => {
           let newHash = int->Hash.hash
-          intsHash->Js.Array2.some(oldHash => oldHash == newHash)
+          intsHash->Array.some(oldHash => oldHash == newHash)
             ? (intsHash, ints)
-            : (intsHash->Js.Array2.concat([newHash]), ints->Js.Array2.concat([int]))
+            : (intsHash->Array.concat([newHash]), ints->Array.concat([int]))
         }, ([], []))
         ints
       })
