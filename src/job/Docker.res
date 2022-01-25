@@ -18,7 +18,7 @@ let getName = (file, folder) => {
 }
 
 let getTags = name => {
-  name->String.includes("armv8") ? ["x86_64", "aws"] : ["armv8", "aws"]
+  name->String.includes("armv8") ? ["armv8", "aws"] : ["x86_64", "aws"]
 }
 
 let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dockerInstance> => {
@@ -35,7 +35,7 @@ let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dock
       name: getName(file.name, folder),
       file: file.name,
       folder: folder,
-      tags: name->getTags,
+      tags: getName(file.name, folder)->getTags,
       reqs: reqs,
     })
   }
