@@ -1,5 +1,5 @@
 let getCurBranch = () => {
-  Env.get("CI_COMMIT_REF_NAME")->Option.toResult("CI_COMMIT_REF_NAME not defined!")
+  Env.getError("CI_COMMIT_REF_NAME")
 }
 
 let getMergeBase = (curBranch, branch) => {

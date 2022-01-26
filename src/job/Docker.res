@@ -37,15 +37,10 @@ let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dock
 }
 
 let getJob = ({name, file, folder, tags, reqs}: dockerInstance) => {
-  switch (
-    Env.get("DOCKER_USER"),
-    Env.get("DOCKER_PASSWORD"),
-    Env.get("DOCKER_REGISTRY"),
-    Env.get("DOCKER_PREFIX"),
-  )->Option.seq4 {
-  | Some(env) => Ok(env)
-  | None => Error("Docker: Username, password, registry or prefix not provided!")
-  }->Result.map(((username, password, registry, prefix)) => {
+  ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
+  ->Tuple.map4(Env.getError)
+  ->Result.seq4
+  ->Result.map(((username, password, registry, prefix)) => {
     let dockerTag = `${registry}${prefix}${name}`
     let script = [
       `docker login --username ${username} --password ${password} ${registry}`,

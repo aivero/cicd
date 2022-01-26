@@ -82,23 +82,21 @@ let init = (ints: array<Instance.t>) => {
   }, [])
 
   let config =
-    switch (Env.get("CONAN_CONFIG_URL"), Env.get("CONAN_CONFIG_DIR"))->Option.seq2 {
-    | Some(url, dir) => Ok((url, dir))
-    | _ => Error("Conan config url or dir not defined")
-    }
+    ("CONAN_CONFIG_URL", "CONAN_CONFIG_DIR")
+    ->Tuple.map2(Env.getError)
+    ->Result.seq2
     ->Task.resolve
     ->TaskResult.flatMap(((url, dir)) => Proc.run(["conan", "config", "install", url, "-sf", dir]))
 
   config
   ->TaskResult.flatMap(_ =>
-    switch [
-      Env.get("CONAN_LOGIN_USERNAME"),
-      Env.get("CONAN_LOGIN_PASSWORD"),
-      Env.get("CONAN_REPO_ALL"),
-    ]->Option.seq {
-    | Some([user, passwd, repo]) => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
-    | _ => Error("Conan login, password or repo not defined")->Task.resolve
-    }
+    ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD", "CONAN_REPO_ALL")
+    ->Tuple.map3(Env.getError)
+    ->Result.seq3
+    ->Task.resolve
+    ->TaskResult.map(((user, passwd, repo)) =>
+      Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
+    )
   )
   ->TaskResult.flatMap(_ =>
     exportPkgs
