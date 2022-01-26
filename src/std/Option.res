@@ -1,3 +1,8 @@
+let toResult = (o, err) => switch o {
+| Some(o) => Ok(o)
+| None => Error(err)
+}
+
 let seq = (a: array<option<'a>>) => {
   a->Array.reduce((a, e) =>
     switch (a, e) {
