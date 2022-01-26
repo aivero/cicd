@@ -17,4 +17,5 @@ let join = Js.Array2.joinWith
 let map = Js.Array2.map
 let reduce = Js.Array2.reduce
 let slice = Belt.Array.slice
+let sort = Js.Array2.sortInPlaceWith
 let some = Js.Array2.some
