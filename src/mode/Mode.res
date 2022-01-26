@@ -21,7 +21,7 @@ let findReqs = (ints, allInts) => {
       allInts->Array.filter(int =>
         reqs->Array.includes(int.name) && !(ints->Array.some(int => reqs->Array.includes(int.name)))
       )
-    Ok(ints->Array.concat(reqs))->Task.resolve
+    ints->Array.concat(reqs)->TaskResult.resolve
   })
 }
 

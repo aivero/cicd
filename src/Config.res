@@ -11,4 +11,4 @@ let rec find = dir => {
 
 let load = (content, path) => content->Yaml.parse->Yaml.map(Instance.create(_, path->Path.dirname))
 
-let loadFile = path => path->File.read->Result.map(v => load(v, path))
+let loadFile = path => path->File.read->Result.map(load(_, path))

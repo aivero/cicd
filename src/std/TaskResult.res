@@ -1,5 +1,5 @@
 type t<'a, 'error> = Task.t<Result.t<'a, 'error>>
-let resolve = Task.resolve
+let resolve = (t) => t->Ok->Task.resolve
 
 let flatten = (to: t<t<'a, 'error>, 'error>) => {
   to->Task.flatMap(r => {
@@ -28,7 +28,7 @@ let rec pool = (tasks: array<unit => Task.t<result<'a, string>>>, count): Task.t
     let tasks = res1->Task.seq->Task.map(Result.seq)
     tasks->map(res1 =>
       switch rest->Array.length {
-      | 0 => Ok(res1)->Task.resolve
+      | 0 => res1->resolve
       | _ =>
         rest->pool(count)->Task.map(res2 => res2->Result.map(res2 => [res1, res2]->Array.flatten))
       }

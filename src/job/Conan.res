@@ -114,7 +114,7 @@ let getBuildOrder = (ints: array<conanInstance>) => {
   locks->Console.log
   let bundle =
     locks->Array.empty
-      ? Ok("")->Task.resolve
+      ? ""->TaskResult.resolve
       : Proc.run(
           ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
         )
@@ -242,7 +242,7 @@ let getConanInstances = (int: Instance.t) => {
         ->Task.resolve
       })
       ->TaskResult.flatMap(revision => {
-        Ok({
+        {
           base: int,
           revision: revision,
           repo: repo,
@@ -250,7 +250,7 @@ let getConanInstances = (int: Instance.t) => {
           args: args,
           profile: profile,
           hash: hash,
-        })->Task.resolve
+        }->TaskResult.resolve
       })
     })
   })
@@ -263,7 +263,7 @@ let getJobs = (ints: array<Instance.t>) => {
   ->TaskResult.flatMap(_ => ints->Array.flatMap(getConanInstances)->TaskResult.seq)
   ->TaskResult.flatMap(ints =>
     switch ints->Array.length {
-    | 0 => Ok([])->Task.resolve
+    | 0 => []->TaskResult.resolve
     | _ => ints->getBuildOrder->TaskResult.map(buildOrder => ints->getJob(buildOrder))
     }
   )

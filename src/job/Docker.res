@@ -1,5 +1,4 @@
 open Job_t
-open Instance
 
 type dockerInstance = {
   name: string,
@@ -66,7 +65,5 @@ let getJob = ({name, file, folder, tags, reqs}: dockerInstance) => {
   })
 }
 
-let getJobs = (ints: array<Instance.t>) => {
-  let ints = ints->Array.flatMap(getInstances)
-  ints->Array.map(getJob)->Result.seq->Task.resolve
-}
+let getJobs = (ints: array<Instance.t>) =>
+  ints->Array.flatMap(getInstances)->Array.map(getJob)->Result.seq->Task.resolve

@@ -6,8 +6,8 @@ let getLastRev = () =>
       Proc.run(["git", "merge-base", "HEAD", `origin/${def_branch}`])->TaskResult.map(String.trim)
     | None => Error("CI_COMMIT_REF_NAME or CI_DEFAULT_BRANCH not set")->Task.resolve
     }
-  | Some(val) => Ok(val)->Task.resolve
-  | None => Ok("HEAD^")->Task.resolve
+  | Some(val) => val->TaskResult.resolve
+  | None => "HEAD^"->TaskResult.resolve
   }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
@@ -32,16 +32,14 @@ let handleConfigChange = confPath => {
   (intsNew, intsOld, filesOld)
   ->TaskResult.seq3
   ->TaskResult.flatMap(((intsNew, intsOld, filesOld)) => {
-    Ok(filesOld->String.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->Task.resolve
+    (filesOld->String.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->TaskResult.resolve
   })
 }
 
 let handleFileChange = (confPath, filePath) => {
   confPath
   ->Config.loadFile
-  ->Result.map(ints =>
-    ints->Array.filter(({folder}) => folder->String.endsWith(filePath->Path.dirname))
-  )
+  ->Result.map(Array.filter(_, ({folder}) => folder->String.endsWith(filePath->Path.dirname)))
   ->Task.resolve
 }
 
