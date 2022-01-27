@@ -3,6 +3,13 @@ let toResult = (o, err) => switch o {
 | None => Error(err)
 }
 
+let map = Belt.Option.map
+let flatMap = Belt.Option.flatMap
+let flatten = o => switch o {
+| Some(Some(o)) => Some(o)
+| _ => None
+}
+
 let seq = (a: array<option<'a>>) => {
   a->Array.reduce((a, e) =>
     switch (a, e) {
