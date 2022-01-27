@@ -19,3 +19,8 @@ let reduce = Js.Array2.reduce
 let slice = Belt.Array.slice
 let sort = Js.Array2.sortInPlaceWith
 let some = Js.Array2.some
+let indexOf = Js.Array2.indexOf
+
+let uniq = a => {
+  a->reduce((a, i) => a->includes(i) ? a : a->concat([i]), [])
+}

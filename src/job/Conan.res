@@ -165,17 +165,17 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
-                let [pkg, ver] = pkg->String.split("#")
-                pkg ++ "#" ++ ver->String.sub(0, hashLength)
+                let [pkg] = pkg->String.split("#")
+                pkg
               })
             | None => []
             },
-          ),
+          )->Array.uniq,
         }
       })
       ->Array.concat([
         {
-          name: pkg ++ "#" ++ pkgRevision->String.sub(0, hashLength),
+          name: pkg,
           script: Some(["echo"]),
           image: None,
           services: None,
