@@ -8,7 +8,7 @@ type conanInstance = {
   revision: string,
   profile: string,
   repo: string,
-  args: array<string>,
+  args: array<string>
 }
 
 type conanInfo = {
@@ -190,7 +190,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
 }
 
 let getConanInstances = (int: Instance.t) => {
-  let {name, version, folder, modeInt} = int
+  let {name, version, folder, modeInt, reqs} = int
   let repo = folder->getRepo
   let args = name->getArgs(modeInt)
 
@@ -207,7 +207,7 @@ let getConanInstances = (int: Instance.t) => {
         extends: extends,
         profile: profile,
         revision: "",
-        hash: "",
+        hash: ""
       }->hashN
       Proc.run(
         [

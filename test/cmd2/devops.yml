@@ -1,5 +1,5 @@
 - version: 1.0.0
   cmds:
     - echo Hello world again!
-  req: 
+  reqs: 
     - cmd1

@@ -14,14 +14,27 @@ let findAllInts = recursive => {
   )
 }
 
-let findReqs = (ints, allInts) => {
+let rec findReqs = (int, allInts) => {
+  allInts->Array.flatMap(aint =>
+    int.reqs->Array.includes(aint.name) || int.trigger->Array.includes(aint.name)
+      ? [aint]->Array.concat(aint->findReqs(allInts))
+      : []
+  )
+}
+
+let addReqs = (ints, allInts) => {
   TaskResult.seq2((ints, allInts))->TaskResult.flatMap(((ints, allInts)) => {
-    let reqs = ints->Array.flatMap(int => int.reqs)
-    let reqs =
-      allInts->Array.filter(int =>
-        reqs->Array.includes(int.name) && !(ints->Array.some(int => reqs->Array.includes(int.name)))
-      )
-    ints->Array.concat(reqs)->TaskResult.resolve
+    let ints = ints->Array.flatMap(findReqs(_, allInts))->Array.concat(ints)
+    ints->Array.map(triggered => {
+      let triggers =
+        ints
+        ->Array.filter(int => int.trigger->Array.includes(triggered.name))
+        ->Array.map(trigger => trigger.name)
+      {
+        ...triggered,
+        reqs: triggered.reqs->Array.concat(triggers),
+      }
+    })->TaskResult.resolve
   })
 }
 
@@ -46,7 +59,7 @@ let load = () => {
   | (None, _) => Git.findInts()
   }
 
-  let ints = ints->findReqs(allInts)
+  let ints = ints->addReqs(allInts)
 
   ints->TaskResult.flatMap(Job.load)
 }

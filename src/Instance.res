@@ -25,7 +25,7 @@ type t = {
   commit: option<string>,
   branch: option<string>,
   reqs: array<string>,
-  revReqs: array<string>,
+  trigger: array<string>,
   bootstrap: bool,
   profiles: array<string>,
   cmdsPre: array<string>,
@@ -84,15 +84,17 @@ let create = (int: Yaml.t, folderPath): t => {
       | _ => []
       }
     , [])
+  | Yaml.String(req) => [req]
   | _ => []
   }
-  let revReqs = switch int->Yaml.get("revReqs") {
-  | Yaml.Array(reqs) => reqs->Array.reduce((reqs, req) =>
-      switch req {
-      | Yaml.String(req) => reqs->Array.concat([req])
+  let trigger = switch int->Yaml.get("trigger") {
+  | Yaml.Array(trigger) => trigger->Array.reduce((ints, int) =>
+      switch int {
+      | Yaml.String(int) => ints->Array.concat([int])
       | _ => []
       }
     , [])
+  | Yaml.String(int) => [int]
   | _ => []
   }
   let bootstrap = switch int->Yaml.get("bootstrap") {
@@ -157,7 +159,7 @@ let create = (int: Yaml.t, folderPath): t => {
     commit: commit,
     branch: branch,
     reqs: reqs,
-    revReqs: revReqs,
+    trigger: trigger,
     bootstrap: bootstrap,
     cmdsPre: cmdsPre,
     cmds: cmds,
