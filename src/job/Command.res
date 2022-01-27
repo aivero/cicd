@@ -23,7 +23,7 @@ let getJobs = (ints: array<Instance.t>) => {
     variables: None,
     extends: None,
     services: None,
-    needs: needs->Array.map(need => `${need}-${profile}`),
+    needs: needs->Array.uniq->Array.map(need => `${need}-${profile}`),
   })
   ->TaskResult.resolve
 }
