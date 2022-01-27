@@ -16,7 +16,7 @@ let findAllInts = recursive => {
 
 let rec findReqs = (int, allInts) => {
   allInts->Array.flatMap(aint =>
-    int.reqs->Array.includes(aint.name) || int.trigger->Array.includes(aint.name)
+    int.needs->Array.includes(aint.name) || int.trigger->Array.includes(aint.name)
       ? [aint]->Array.concat(aint->findReqs(allInts))
       : []
   )
@@ -32,7 +32,7 @@ let addReqs = (ints, allInts) => {
         ->Array.map(trigger => trigger.name)
       {
         ...triggered,
-        reqs: triggered.reqs->Array.concat(triggers),
+        needs: triggered.needs->Array.concat(triggers),
       }
     })->TaskResult.resolve
   })

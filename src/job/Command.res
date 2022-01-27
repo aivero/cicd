@@ -15,15 +15,15 @@ let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
   ->Array.flatMap(getInstances)
-  ->Array.map(({base: {name, image, cmds, reqs}, profile}) => {
+  ->Array.map(({base: {name, image, script, needs}, profile}) => {
     name: `${name}-${profile}`,
-    script: Some(cmds),
+    script: Some(script),
     image: image,
     tags: None,
     variables: None,
     extends: None,
     services: None,
-    needs: reqs->Array.map(need => `${need}-${profile}`),
+    needs: needs->Array.map(need => `${need}-${profile}`),
   })
   ->TaskResult.resolve
 }

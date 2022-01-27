@@ -5,7 +5,7 @@ type dockerInstance = {
   file: string,
   folder: string,
   tags: array<string>,
-  reqs: array<string>,
+  needs: array<string>,
 }
 
 let getName = (file, folder) => {
@@ -16,13 +16,13 @@ let getName = (file, folder) => {
   }
 }
 
-let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dockerInstance> => {
+let getInstances = ({name, folder, modeInt, tags, needs}: Instance.t): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
   }
   switch file {
-  | Some(file) => [{name: name, file: file, folder: folder, tags: tags, reqs: reqs}]
+  | Some(file) => [{name: name, file: file, folder: folder, tags: tags, needs: needs}]
   | None =>
     Path.read(folder)
     ->Array.filter(file => file.name->String.includes("Dockerfile"))
@@ -31,12 +31,12 @@ let getInstances = ({name, folder, modeInt, tags, reqs}: Instance.t): array<dock
       file: file.name,
       folder: folder,
       tags: ["gitlab-org-docker"],
-      reqs: reqs,
+      needs: needs,
     })
   }
 }
 
-let getJob = ({name, file, folder, tags, reqs}: dockerInstance) => {
+let getJob = ({name, file, folder, tags, needs}: dockerInstance) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
@@ -55,7 +55,7 @@ let getJob = ({name, file, folder, tags, reqs}: dockerInstance) => {
       tags: Some(tags),
       extends: None,
       variables: None,
-      needs: reqs,
+      needs: needs,
     }
   })
 }

@@ -161,7 +161,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           tags: None,
           variables: Some(int->getVariables->Dict.fromArray),
           extends: Some(int.extends),
-          needs: int.base.reqs->Array.concat(
+          needs: int.base.needs->Array.concat(
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
@@ -190,7 +190,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
 }
 
 let getConanInstances = (int: Instance.t) => {
-  let {name, version, folder, modeInt, reqs} = int
+  let {name, version, folder, modeInt, needs} = int
   let repo = folder->getRepo
   let args = name->getArgs(modeInt)
 

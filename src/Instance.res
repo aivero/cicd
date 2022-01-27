@@ -24,13 +24,13 @@ type t = {
   modeInt: Yaml.t,
   commit: option<string>,
   branch: option<string>,
-  reqs: array<string>,
+  needs: array<string>,
   trigger: array<string>,
   bootstrap: bool,
   profiles: array<string>,
-  cmdsPre: array<string>,
-  cmds: array<string>,
-  cmdsPost: array<string>,
+  beforeScript: array<string>,
+  script: array<string>,
+  afterScript: array<string>,
   image: option<string>,
   tags: array<string>,
 }
@@ -123,31 +123,34 @@ let create = (int: Yaml.t, folderPath): t => {
     , [])
   | _ => ["linux-x86_64", "linux-armv8"]
   }
-  let cmdsPre = switch int->Yaml.get("cmdsPre") {
+  let beforeScript = switch int->Yaml.get("before_script") {
   | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
       | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
+  | Yaml.String(cmd) => [cmd]
   | _ => []
   }
-  let cmds = switch int->Yaml.get("cmds") {
+  let script = switch int->Yaml.get("script") {
   | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
       | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
+  | Yaml.String(cmd) => [cmd]
   | _ => []
   }
-  let cmdsPost = switch int->Yaml.get("cmdsPost") {
+  let afterScript = switch int->Yaml.get("after_script") {
   | Yaml.Array(cmds) => cmds->Array.reduce((cmds, cmd) =>
       switch cmd {
       | Yaml.String(cmd) => cmds->Array.concat([cmd])
       | _ => []
       }
     , [])
+  | Yaml.String(cmd) => [cmd]
   | _ => []
   }
   {
@@ -158,12 +161,12 @@ let create = (int: Yaml.t, folderPath): t => {
     modeInt: modeInt,
     commit: commit,
     branch: branch,
-    reqs: reqs,
+    needs: reqs,
     trigger: trigger,
     bootstrap: bootstrap,
-    cmdsPre: cmdsPre,
-    cmds: cmds,
-    cmdsPost: cmdsPost,
+    beforeScript: beforeScript,
+    script: script,
+    afterScript: afterScript,
     profiles: profiles,
     image: image,
     tags: tags,
