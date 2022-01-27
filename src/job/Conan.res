@@ -1,5 +1,5 @@
 open Instance
-open Job_t
+open! Job_t
 
 type conanInstance = {
   base: Instance.t,
@@ -8,7 +8,7 @@ type conanInstance = {
   revision: string,
   profile: string,
   repo: string,
-  args: array<string>
+  args: array<string>,
 }
 
 type conanInfo = {
@@ -145,7 +145,10 @@ let getExtends = ((profile, bootstrap)) => {
 let getJob = (ints: array<conanInstance>, buildOrder) => {
   buildOrder->Array.flatMapWithIndex((index, group) => {
     group->Array.flatMap(pkg => {
-      let [pkg, pkgRevision] = pkg->String.split("@#")
+      let (pkg, pkgRevision) = switch pkg->String.split("@#") {
+      | [pkg, pkgRevision] => (pkg, pkgRevision)
+      | _ => ("invalid-pkg", "invalid-rev")
+      }
       let ints =
         ints->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}`
@@ -160,16 +163,20 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           tags: None,
           variables: Some(int->getVariables->Dict.fromArray),
           extends: Some(int.extends),
-          needs: int.base.needs->Array.concat(
+          needs: int.base.needs
+          ->Array.concat(
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
-                let [pkg, _] = pkg->String.split("@#")
-                pkg
+                switch pkg->String.split("@#") {
+                | [pkg, _] => pkg
+                | _ => "invalid-pkg"
+                }
               })
             | None => []
             },
-          )->Array.uniq,
+          )
+          ->Array.uniq,
         }
       })
       ->Array.concat([
@@ -189,7 +196,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
 }
 
 let getConanInstances = (int: Instance.t) => {
-  let {name, version, folder, modeInt, needs} = int
+  let {name, version, folder, modeInt} = int
   let repo = folder->getRepo
   let args = name->getArgs(modeInt)
 
@@ -206,7 +213,7 @@ let getConanInstances = (int: Instance.t) => {
         extends: extends,
         profile: profile,
         revision: "",
-        hash: ""
+        hash: "",
       }->hashN
       Proc.run(
         [
