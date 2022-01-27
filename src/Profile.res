@@ -1,12 +1,13 @@
 type t = {int: Instance.t, profile: string}
 
 let getImage = (profile, image) => {
-  let base = Env.get("CICD_DOCKER_BASE")
+  let registry = Env.get("DOCKER_REGISTRY")
+  let prefix = Env.get("DOCKER_PREFIX")
 
   let triple = profile->String.split("-")->List.fromArray
   let os = switch triple {
   | list{_, "musl", ..._} => Some("alpine")
-  | list{"linux", ..._} | list{"wasi", ..._} => Env.get("CICD_DOCKER_DISTRO")
+  | list{"linux", ..._} | list{"wasi", ..._} => Env.get("DOCKER_DISTRO")
   | list{"windows", ..._} => Some("windows")
   | list{"macos", ..._} => Some("macos")
   | _ => None
@@ -19,6 +20,6 @@ let getImage = (profile, image) => {
   }
   switch image {
   | Some(image) => Some(image)
-  | None => (base, os, arch)->Option.seq3->Option.map(((base, os, arch)) => `${base}${os}-${arch}`)
+  | None => (registry, prefix, os, arch)->Option.seq4->Option.map(((registry, prefix, os, arch)) => `${registry}${prefix}${os}-${arch}`)
   }
 }
