@@ -2,6 +2,7 @@ open Job_t
 
 type dockerInstance = {
   name: string,
+  version: string,
   file: string,
   folder: string,
   tags: array<string>,
@@ -16,18 +17,27 @@ let getName = (file, folder) => {
   }
 }
 
-let getInstances = ({name, folder, modeInt, tags, needs}: Instance.t): array<dockerInstance> => {
+let getInstances = ({name, version, folder, modeInt, tags, needs}: Instance.t): array<
+  dockerInstance,
+> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
   }
   switch file {
-  | Some(file) => [{name: name, file: file, folder: folder, tags: tags, needs: needs}]
+  | Some(file) => [
+      {name: name, version: version, file: file, folder: folder, tags: tags, needs: needs},
+    ]
   | None =>
     Path.read(folder)
     ->Array.filter(file => file.name->String.includes("Dockerfile"))
     ->Array.map(file => {
-      name: getName(file.name, folder),
+      name: switch (file.name->String.split("."))[0] {
+      | Some("Dockerfile") => `${name}/${version}-dockerfile`
+      | Some(name) => `${name}/${version}`
+      | _ => `${name}/${version}-dockerfile`
+      },
+      version: version,
       file: file.name,
       folder: folder,
       tags: ["gitlab-org-docker"],
@@ -36,12 +46,12 @@ let getInstances = ({name, folder, modeInt, tags, needs}: Instance.t): array<doc
   }
 }
 
-let getJob = ({name, file, folder, tags, needs}: dockerInstance) => {
+let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
   ->Result.map(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${name}`
+    let dockerTag = `${registry}${prefix}${name}:${version}`
     let script = [
       `docker login --username ${username} --password ${password} ${registry}`,
       `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
@@ -61,4 +71,24 @@ let getJob = ({name, file, folder, tags, needs}: dockerInstance) => {
 }
 
 let getJobs = (ints: array<Instance.t>) =>
-  ints->Array.flatMap(getInstances)->Array.map(getJob)->Result.seq->Task.resolve
+  ints
+  ->Array.filter(int => int.mode == #docker)
+  ->Array.flatMap(int => {
+    let ints = int->getInstances
+    ints
+    ->Array.map(getJob)
+    ->Array.concat([
+      Ok({
+        name: `${int.name}/${int.version}`,
+        script: Some(["echo"]),
+        image: None,
+        services: None,
+        tags: None,
+        extends: None,
+        variables: None,
+        needs: ints->Array.map(int => int.name),
+      }),
+    ])
+  })
+  ->Result.seq
+  ->Task.resolve

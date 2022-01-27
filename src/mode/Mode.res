@@ -16,25 +16,38 @@ let findAllInts = recursive => {
 
 let rec findReqs = (int, allInts) => {
   allInts->Array.flatMap(aint =>
-    int.needs->Array.includes(aint.name) || int.trigger->Array.includes(aint.name)
-      ? [aint]->Array.concat(aint->findReqs(allInts))
-      : []
+    if int.needs->Array.includes(aint.name) || int.trigger->Array.includes(aint.name) {
+      let reqs = aint->findReqs(allInts)
+      reqs->Array.some(req =>
+        req.needs->Array.includes(aint.name) || req.trigger->Array.includes(aint.name)
+      )
+        ? reqs
+        : [aint]->Array.concat(reqs)
+    } else {
+      []
+    }
   )
 }
 
 let addReqs = (ints, allInts) => {
   TaskResult.seq2((ints, allInts))->TaskResult.flatMap(((ints, allInts)) => {
-    let ints = ints->Array.flatMap(findReqs(_, allInts))->Array.concat(ints)
-    ints->Array.map(triggered => {
+    let reqs = ints->Array.flatMap(findReqs(_, allInts))
+    let ints =
+      reqs
+      ->Array.filter(req => !(ints->Array.some(int => int.name == req.name)))
+      ->Array.concat(ints)
+    ints
+    ->Array.map(triggered => {
       let triggers =
         ints
         ->Array.filter(int => int.trigger->Array.includes(triggered.name))
-        ->Array.map(trigger => trigger.name)
+        ->Array.map(trigger => `${trigger.name}/${trigger.version}`)
       {
         ...triggered,
         needs: triggered.needs->Array.concat(triggers),
       }
-    })->TaskResult.resolve
+    })
+    ->TaskResult.resolve
   })
 }
 

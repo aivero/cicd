@@ -17,7 +17,7 @@ let catch = (a, fn) => Js.Promise.catch(fn, a)
 let flatCatch = (a, fn) => a->catch(e => e->fn->resolve)
 let catchExit = a =>
   a->catchUnit(e => {
-    `Rejected: ${e->toString}`->Js.Console.log
+    `Rejected: ${e->toString}`->Console.log
     exit(1)
   })
 
@@ -34,7 +34,7 @@ let rec pool = (tasks, count) => {
   let curTasks =
     tasks->Array.slice(~offset=0, ~len=count)->Array.map(f => (resolve => resolve(f()))->new)->seq
   let rest = tasks->Array.slice(~offset=count, ~len=tasks->Array.length - count)
-  `pool: ${rest->Array.length->Int.toString}`->Js.Console.log
+  `pool: ${rest->Array.length->Int.toString}`->Console.log
   switch rest->Array.length {
   | 0 => curTasks
   | _ => curTasks->flatMap(res1 => rest->pool(count)->map(res2 => [res1, res2]->Array.flatten))

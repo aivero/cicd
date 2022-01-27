@@ -1,2 +1,4 @@
 - version: 1.0.0
-  trigger: docker-triggered
+  trigger: 
+    - docker-triggered
+    - conan-multi-version

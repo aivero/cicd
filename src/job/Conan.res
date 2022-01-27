@@ -109,7 +109,6 @@ let init = (ints: array<Instance.t>) => {
 
 let getBuildOrder = (ints: array<conanInstance>) => {
   let locks = ints->Array.map(({base: {name, version}, hash}) => `${name}-${version}-${hash}.lock`)
-  locks->Console.log
   let bundle =
     locks->Array.empty
       ? ""->TaskResult.resolve
@@ -146,10 +145,10 @@ let getExtends = ((profile, bootstrap)) => {
 let getJob = (ints: array<conanInstance>, buildOrder) => {
   buildOrder->Array.flatMapWithIndex((index, group) => {
     group->Array.flatMap(pkg => {
-      let [pkg, pkgRevision] = pkg->String.split("#")
+      let [pkg, pkgRevision] = pkg->String.split("@#")
       let ints =
         ints->Array.filter(({base: {name, version}, revision}) =>
-          pkgRevision == revision && pkg == `${name}/${version}@`
+          pkgRevision == revision && pkg == `${name}/${version}`
         )
       ints
       ->Array.map(int => {
@@ -165,7 +164,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
-                let [pkg, _] = pkg->String.split("#")
+                let [pkg, _] = pkg->String.split("@#")
                 pkg
               })
             | None => []
@@ -182,7 +181,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           tags: Some(["x86_64"]),
           variables: None,
           extends: None,
-          needs: ints->Array.map(foundPkg => `${pkg}${foundPkg.hash}`),
+          needs: ints->Array.map(foundPkg => `${pkg}@${foundPkg.hash}`),
         },
       ])
     })
