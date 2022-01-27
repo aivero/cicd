@@ -9,7 +9,7 @@ let getJobs = (ints: array<Instance.t>) => {
     ->Array.map(profile => {
       name: `${name}/${version}-${profile}`,
       script: Some(script),
-      image: image,
+      image: profile->Profile.getImage(image),
       tags: None,
       variables: None,
       extends: None,

@@ -1,37 +1,29 @@
 type t = {int: Instance.t, profile: string}
 
-let getImage = ({int, profile}: t) => {
-  // Base Conan image
-  let base = "aivero/conan:"
+let getImage = (profile, image) => {
+  let base = Env.get("CICD_DOCKER_BASE")
 
   let triple = profile->String.split("-")->List.fromArray
   let os = switch triple {
-  | list{_, "musl", ..._} => Ok("alpine")
-  | list{"linux", ..._} | list{"wasi", ..._} => Ok("focal")
-  | list{"windows", ..._} => Ok("windows")
-  | list{"macos", ..._} => Ok("macos")
-  | _ => Error(`Could not detect image os for profile: ${profile}`)
+  | list{_, "musl", ..._} => Some("alpine")
+  | list{"linux", ..._} | list{"wasi", ..._} => Env.get("CICD_DOCKER_DISTRO")
+  | list{"windows", ..._} => Some("windows")
+  | list{"macos", ..._} => Some("macos")
+  | _ => None
   }
 
   let arch = switch triple {
-  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok("x86_64")
-  | list{_, "armv8", ..._} => Ok("armv8")
-  | _ => Error(`Could not detect image arch for profile: ${profile}`)
+  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Some("x86_64")
+  | list{_, "armv8", ..._} => Some("armv8")
+  | _ => None
   }
-
-  let end = int.bootstrap ? "-bootstrap" : ""
-
-  (os, arch)->Result.seq2->Result.map(((os, arch)) => `${base}${os}-${arch}${end}`)
-}
-
-let getRunnerTags = profile => {
-  let [_, arch] = profile->String.split("-")
-  switch arch {
-  | "x86_64" | "wasm" => Ok(["X64", "aws"])
-  | "armv8" => Ok(["ARM64", "aws"])
-  | _ => Error(`Could detect runner tags for profile: ${profile}`)
+  switch image {
+  | Some(image) => Some(image)
+  | None => (base, os, arch)->Option.seq3->Option.map(((base, os, arch)) => `${base}${os}-${arch}`)
   }
 }
+
+
 
 // Parse the profile name to a docker/buildx conform string as per
 // https://github.com/docker/buildx#---platformvaluevalue
