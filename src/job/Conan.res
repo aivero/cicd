@@ -165,7 +165,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             switch buildOrder[index - 1] {
             | Some(group) =>
               group->Array.map(pkg => {
-                let [pkg] = pkg->String.split("#")
+                let [pkg, _] = pkg->String.split("#")
                 pkg
               })
             | None => []
