@@ -56,20 +56,23 @@ let handleConfigChange = confPath => {
   let intsNew =
     Proc.run(["git", "show", `HEAD:${confPath}`])->TaskResult.map(Config.load(_, confPath))
   let lastRev = getLastRev()
+
+  let filesOld = lastRev->TaskResult.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
   let intsOld =
-    lastRev->TaskResult.flatMap(lastRev =>
-      Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.map(conf =>
-        conf->Config.load(confPath)
-      )
+    (filesOld, lastRev)
+    ->TaskResult.seq2
+    ->TaskResult.flatMap(((filesOld, lastRev)) =>
+      filesOld->String.includes(confPath)
+        ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.map(conf =>
+            conf->Config.load(confPath)
+          )
+        : []->TaskResult.resolve
     )
 
-  let lastRev = getLastRev()
-  let filesOld = lastRev->TaskResult.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
-
-  (intsNew, intsOld, filesOld)
-  ->TaskResult.seq3
-  ->TaskResult.flatMap(((intsNew, intsOld, filesOld)) => {
-    (filesOld->String.includes(confPath) ? intsNew->cmpInts(intsOld) : [])->TaskResult.resolve
+  (intsNew, intsOld)
+  ->TaskResult.seq2
+  ->TaskResult.flatMap(((intsNew, intsOld)) => {
+    intsNew->cmpInts(intsOld)->TaskResult.resolve
   })
 }
 
