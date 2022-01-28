@@ -61,7 +61,14 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
         `docker login --username ${username} --password ${password} ${registry}`,
         `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
         `docker push ${dockerTag}:${version}`,
-      ]->Array.concat(branchTagUpload ? [`docker push ${dockerTag}:$CI_COMMIT_REF_NAME`] : [])
+      ]->Array.concat(
+        branchTagUpload
+          ? [
+              `docker tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
+              `docker push ${dockerTag}:$CI_COMMIT_REF_NAME`,
+            ]
+          : [],
+      )
     {
       name: `${name}/${version}`,
       script: Some(script),
