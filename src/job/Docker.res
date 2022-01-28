@@ -33,9 +33,9 @@ let getInstances = ({name, version, folder, modeInt, tags, needs}: Instance.t): 
     ->Array.filter(file => file.name->String.includes("Dockerfile"))
     ->Array.map(file => {
       name: switch (file.name->String.split("."))[0] {
-      | Some("Dockerfile") => `${name}/${version}-dockerfile`
-      | Some(name) => `${name}/${version}`
-      | _ => `${name}/${version}-dockerfile`
+      | Some("Dockerfile") => `${name}-dockerfile`
+      | Some(name) => `${name}-dockerfile`
+      | _ => `${name}-dockerfile`
       },
       version: version,
       file: file.name,
@@ -58,7 +58,7 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
       `docker push ${dockerTag}`,
     ]
     {
-      name: name,
+      name: `${name}/${version}`,
       script: Some(script),
       image: Some("docker:19.03.12"),
       services: Some(["docker:19.03.12-dind"]),
