@@ -51,12 +51,17 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
   ->Tuple.map4(Env.getError)
   ->Result.seq4
   ->Result.map(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${name}:${version}`
-    let script = [
-      `docker login --username ${username} --password ${password} ${registry}`,
-      `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
-      `docker push ${dockerTag}`,
-    ]
+    let dockerTag = `${registry}${prefix}${name}`
+    let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
+    | Some(_) => true
+    | _ => false
+    }
+    let script =
+      [
+        `docker login --username ${username} --password ${password} ${registry}`,
+        `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}`,
+        `docker push ${dockerTag}:${version}`,
+      ]->Array.concat(branchTagUpload ? [`docker push ${dockerTag}:$CI_COMMIT_REF_NAME`] : [])
     {
       name: `${name}/${version}`,
       script: Some(script),
