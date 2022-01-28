@@ -86,7 +86,7 @@ let getJobs = (ints: array<Instance.t>) =>
         tags: None,
         extends: None,
         variables: None,
-        needs: ints->Array.map(int => int.name),
+        needs: ints->Array.map(int => `${int.name}/${int.version}`),
       }),
     ])
   })
