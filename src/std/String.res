@@ -7,3 +7,4 @@ let split = Js.String2.split
 let trim = Js.String2.trim
 let sub = (s, start, end) => s->Js.String2.slice(~from=start, ~to_=end)
 let match = Js.String2.match_
+let repeat = Js.String2.repeat
