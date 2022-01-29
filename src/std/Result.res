@@ -2,6 +2,19 @@ type t<'a, 'e> = Belt.Result.t<'a, 'e>
 
 let map = Belt.Result.map
 let flatMap = Belt.Result.flatMap
+let flatten = o =>
+  switch o {
+  | Ok(Ok(o)) => Ok(o)
+  | Ok(Error(e)) => Error(e)
+  | Error(e) => Error(e)
+  }
+
+let mapError = (r, f) =>
+  switch r {
+  | Error(val) => Error(val->f)
+  | Ok(y) => Ok(y)
+  }
+let flatMapError = (r, f) => r->mapError(f)->flatten
 
 let seq = (a: array<result<'a, 'error>>) => {
   a->Array.reduce((a, e) =>
