@@ -20,13 +20,11 @@ let rec classify = value => {
   | "[object String]" => String(_asString(value))
   | "[object Number]" => Number(_asFloat(value))
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
-  | _ =>
-    Object(
-      _asDict(value)->Dict.map(((key, val)) => (key, val->classify))->Dict.fromArray,
-    )
+  | _ => Object(_asDict(value)->Dict.map(((key, val)) => (key, val->classify))->Dict.fromArray)
   }
 }
 
+module Object = {
 let get = (json: t, key) =>
   switch json {
   | Object(dict) =>
@@ -36,12 +34,23 @@ let get = (json: t, key) =>
     }
   | _ => Null
   }
+}
 
-let map = (json, f) =>
-  switch json {
-  | Array(array) => array->Array.map(f)
-  | _ => []
-  }
+module Array = {
+  let get = (json: t) =>
+    switch json {
+    | Array(array) => array
+    | _ => []
+    }
+}
+
+module String = {
+  let get = (json: t) =>
+    switch json {
+    | String(str) => str
+    | _ => ""
+    }
+}
 
 @val external _parse: string => t = "JSON.parse"
 let parse = string => string->_parse->classify

@@ -72,8 +72,6 @@ let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanI
   )
 }
 
-@send external toLockfile: 'a => array<array<string>> = "%identity"
-
 let init = (ints: array<Instance.t>) => {
   let exportPkgs = ints->Array.reduce((pkgs, {name, version, folder}) => {
     pkgs->Array.some(pkg => pkg == (`${name}/${version}@`, folder))
@@ -121,7 +119,12 @@ let getBuildOrder = (ints: array<conanInstance>) => {
   })
   ->Task.flatMap(_ => {
     File.read("build_order.json")
-    ->Result.map(content => content->Js.Json.parseExn->toLockfile)
+    ->Result.map(content => {
+      content
+      ->Json.parse
+      ->Json.Array.get
+      ->Array.map(array => array->Json.Array.get->Array.map(Json.String.get))
+    })
     ->Task.fromResult
   })
 }
@@ -232,10 +235,10 @@ let getConanInstances = (int: Instance.t) => {
         ->Result.flatMap(lock =>
           switch lock
           ->Json.parse
-          ->Json.get("graph_lock")
-          ->Json.get("nodes")
-          ->Json.get("1")
-          ->Json.get("ref") {
+          ->Json.Object.get("graph_lock")
+          ->Json.Object.get("nodes")
+          ->Json.Object.get("1")
+          ->Json.Object.get("ref") {
           | Json.String(ref) =>
             switch (ref->String.split("#"))[1] {
             | Some(revision) => Ok(revision)
