@@ -200,7 +200,8 @@ let getConanInstances = (int: Instance.t) => {
   let repo = folder->getRepo
   let args = name->getArgs(modeInt)
 
-  int.profiles->Array.map(profile => {
+  int.profiles
+  ->Array.map(profile => {
     let extends = (profile, int.bootstrap)->getExtends
     (extends, repo)
     ->Result.seq2
@@ -258,17 +259,22 @@ let getConanInstances = (int: Instance.t) => {
       })
     })
   })
+  ->Task.seq
 }
 
 let getJobs = (ints: array<Instance.t>) => {
   let ints = ints->Array.filter(int => int.mode == #conan)
   ints
   ->init
-  ->Task.flatMap(_ => ints->Array.flatMap(getConanInstances)->Task.seq)
+  ->Task.flatMap(_ =>
+    ints
+    ->Array.map((int, ()) => int->getConanInstances)
+    ->Task.pool(Sys.cpus)
+    ->Task.map(Array.flatten)
+  )
   ->Task.flatMap(ints =>
-    switch ints->Array.length {
-    | 0 => []->Task.to
-    | _ => ints->getBuildOrder->Task.map(buildOrder => ints->getJob(buildOrder))
-    }
+    ints->Array.empty
+      ? []->Task.to
+      : ints->getBuildOrder->Task.map(buildOrder => ints->getJob(buildOrder))
   )
 }
