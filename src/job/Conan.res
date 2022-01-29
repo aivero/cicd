@@ -85,25 +85,25 @@ let init = (ints: array<Instance.t>) => {
     ("CONAN_CONFIG_URL", "CONAN_CONFIG_DIR")
     ->Tuple.map2(Env.getError)
     ->Result.seq2
-    ->Task.resolve
-    ->TaskResult.flatMap(((url, dir)) => Proc.run(["conan", "config", "install", url, "-sf", dir]))
+    ->Task.fromResult
+    ->Task.flatMap(((url, dir)) => Proc.run(["conan", "config", "install", url, "-sf", dir]))
 
   config
-  ->TaskResult.flatMap(_ =>
+  ->Task.flatMap(_ =>
     ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD", "CONAN_REPO_ALL")
     ->Tuple.map3(Env.getError)
     ->Result.seq3
-    ->Task.resolve
-    ->TaskResult.map(((user, passwd, repo)) =>
+    ->Task.fromResult
+    ->Task.map(((user, passwd, repo)) =>
       Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
     )
   )
-  ->TaskResult.flatMap(_ =>
+  ->Task.flatMap(_ =>
     exportPkgs
     ->Array.map(((pkg, folder), ()) => {
       Proc.run(["conan", "export", folder, pkg])
     })
-    ->TaskResult.pool(Sys.cpus)
+    ->Task.pool(Sys.cpus)
   )
 }
 
@@ -111,18 +111,18 @@ let getBuildOrder = (ints: array<conanInstance>) => {
   let locks = ints->Array.map(({base: {name, version}, hash}) => `${name}-${version}-${hash}.lock`)
   let bundle =
     locks->Array.empty
-      ? ""->TaskResult.resolve
+      ? ""->Task.to
       : Proc.run(
           ["conan", "lock", "bundle", "create", "--bundle-out=lock.bundle"]->Array.concat(locks),
         )
   bundle
-  ->TaskResult.flatMap(_ => {
+  ->Task.flatMap(_ => {
     Proc.run(["conan", "lock", "bundle", "build-order", "lock.bundle", "--json=build_order.json"])
   })
-  ->TaskResult.flatMap(_ => {
+  ->Task.flatMap(_ => {
     File.read("build_order.json")
     ->Result.map(content => content->Js.Json.parseExn->toLockfile)
-    ->Task.resolve
+    ->Task.fromResult
   })
 }
 
@@ -204,8 +204,8 @@ let getConanInstances = (int: Instance.t) => {
     let extends = (profile, int.bootstrap)->getExtends
     (extends, repo)
     ->Result.seq2
-    ->Task.resolve
-    ->TaskResult.flatMap(((extends, repo)) => {
+    ->Task.fromResult
+    ->Task.flatMap(((extends, repo)) => {
       let hash = {
         base: int,
         repo: repo,
@@ -226,7 +226,7 @@ let getConanInstances = (int: Instance.t) => {
           `-pr=${profile}`,
         ]->Array.concat(args),
       )
-      ->TaskResult.flatMap(_ => {
+      ->Task.flatMap(_ => {
         File.read(`${name}-${version}-${hash}.lock`)
         ->Result.flatMap(lock =>
           switch lock
@@ -243,9 +243,9 @@ let getConanInstances = (int: Instance.t) => {
           | _ => Error(`Invalid lock file: ${name}-${version}-${hash}.lock`)
           }
         )
-        ->Task.resolve
+        ->Task.fromResult
       })
-      ->TaskResult.flatMap(revision => {
+      ->Task.flatMap(revision => {
         {
           base: int,
           revision: revision,
@@ -254,7 +254,7 @@ let getConanInstances = (int: Instance.t) => {
           args: args,
           profile: profile,
           hash: hash,
-        }->TaskResult.resolve
+        }->Task.to
       })
     })
   })
@@ -264,11 +264,11 @@ let getJobs = (ints: array<Instance.t>) => {
   let ints = ints->Array.filter(int => int.mode == #conan)
   ints
   ->init
-  ->TaskResult.flatMap(_ => ints->Array.flatMap(getConanInstances)->TaskResult.seq)
-  ->TaskResult.flatMap(ints =>
+  ->Task.flatMap(_ => ints->Array.flatMap(getConanInstances)->Task.seq)
+  ->Task.flatMap(ints =>
     switch ints->Array.length {
-    | 0 => []->TaskResult.resolve
-    | _ => ints->getBuildOrder->TaskResult.map(buildOrder => ints->getJob(buildOrder))
+    | 0 => []->Task.to
+    | _ => ints->getBuildOrder->Task.map(buildOrder => ints->getJob(buildOrder))
     }
   )
 }

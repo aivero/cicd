@@ -29,5 +29,5 @@ let getJobs = (ints: array<Instance.t>) => {
       },
     ])
   })
-  ->TaskResult.resolve
+  ->Task.to
 }

@@ -17,7 +17,7 @@ let parseMode = str => {
 }
 
 let load = ints => {
-  Task.seq(
+  Async.seq(
     [Command.getJobs, Conan.getJobs, Docker.getJobs]->Array.map(f => ints->f),
-  )->Task.map(jobs => jobs->Result.seq->Result.map(Array.flatten))
+  )->Async.map(jobs => jobs->Result.seq->Result.map(Array.flatten))
 }

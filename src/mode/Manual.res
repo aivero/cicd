@@ -31,5 +31,5 @@ let findInts = allInts => {
   | None => []
   }
 
-  allInts->TaskResult.map(ints => ints->filter(comps))
+  allInts->Task.map(ints => ints->filter(comps))
 }

@@ -4,21 +4,25 @@ let getCurBranch = () => {
 
 let getMergeBase = (curBranch, branch) => {
   Proc.run(["git", "merge-base", curBranch, branch])
-  ->TaskResult.map(String.trim)
-  ->TaskResult.flatMap(mergeBase =>
+  ->Task.map(String.trim)
+  ->Task.flatMap(mergeBase =>
     Proc.run(["git", "rev-list", "--count", `${curBranch}...${mergeBase}`])
-    ->TaskResult.flatMap(output =>
-      output->String.trim->Int.fromString->Option.toResult("Couldn't convert to int")->Task.resolve
+    ->Task.flatMap(output =>
+      output
+      ->String.trim
+      ->Int.fromString
+      ->Option.toResult("Couldn't convert to int")
+      ->Task.fromResult
     )
-    ->TaskResult.map(countMergeBase => (countMergeBase, branch, mergeBase))
+    ->Task.map(countMergeBase => (countMergeBase, branch, mergeBase))
   )
 }
 
 let getParentBranch = () => {
-  let curBranch = getCurBranch()->Task.resolve
+  let curBranch = getCurBranch()->Task.fromResult
   (curBranch, Proc.run(["git", "branch", "-a"]))
-  ->TaskResult.seq2
-  ->TaskResult.flatMap(((curBranch, output)) => {
+  ->Task.seq2
+  ->Task.flatMap(((curBranch, output)) => {
     let branches =
       output
       ->String.trim
@@ -29,22 +33,22 @@ let getParentBranch = () => {
       )
     branches
     ->Array.map(getMergeBase(curBranch))
-    ->TaskResult.seq
-    ->TaskResult.flatMap(mergeBases =>
+    ->Task.seq
+    ->Task.flatMap(mergeBases =>
       Array.sort(mergeBases, ((a, _, _), (b, _, _)) => a - b)[0]
       ->Option.toResult("No merge bases")
-      ->Task.resolve
+      ->Task.fromResult
     )
   })
-  ->TaskResult.map(((_, branch, commit)) => (branch, commit))
+  ->Task.map(((_, branch, commit)) => (branch, commit))
 }
 
 let getLastRev = () =>
   switch Env.get("CI_COMMIT_BEFORE_SHA") {
   | Some("0000000000000000000000000000000000000000") =>
-    getParentBranch()->TaskResult.map(((_, commit)) => commit)
-  | Some(val) => val->TaskResult.resolve
-  | None => "HEAD^"->TaskResult.resolve
+    getParentBranch()->Task.map(((_, commit)) => commit)
+  | Some(val) => val->Task.to
+  | None => "HEAD^"->Task.to
   }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
@@ -53,26 +57,23 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 }
 
 let handleConfigChange = confPath => {
-  let intsNew =
-    Proc.run(["git", "show", `HEAD:${confPath}`])->TaskResult.map(Config.load(_, confPath))
+  let intsNew = Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(Config.load(_, confPath))
   let lastRev = getLastRev()
 
-  let filesOld = lastRev->TaskResult.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
+  let filesOld = lastRev->Task.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
   let intsOld =
     (filesOld, lastRev)
-    ->TaskResult.seq2
-    ->TaskResult.flatMap(((filesOld, lastRev)) =>
+    ->Task.seq2
+    ->Task.flatMap(((filesOld, lastRev)) =>
       filesOld->String.includes(confPath)
-        ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->TaskResult.map(conf =>
-            conf->Config.load(confPath)
-          )
-        : []->TaskResult.resolve
+        ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(Config.load(_, confPath))
+        : []->Task.to
     )
 
   (intsNew, intsOld)
-  ->TaskResult.seq2
-  ->TaskResult.flatMap(((intsNew, intsOld)) => {
-    intsNew->cmpInts(intsOld)->TaskResult.resolve
+  ->Task.seq2
+  ->Task.flatMap(((intsNew, intsOld)) => {
+    intsNew->cmpInts(intsOld)->Task.to
   })
 }
 
@@ -80,7 +81,7 @@ let handleFileChange = (confPath, filePath) => {
   confPath
   ->Config.loadFile
   ->Result.map(Array.filter(_, ({folder}) => folder->String.endsWith(filePath->Path.dirname)))
-  ->Task.resolve
+  ->Task.fromResult
 }
 
 let handleChange = file => {
@@ -96,18 +97,18 @@ let findInts = () => {
   Console.log("Git Mode: Create instances from changed files in git")
   let lastRev = getLastRev()
   lastRev
-  ->TaskResult.flatMap(lastRev => {
+  ->Task.flatMap(lastRev => {
     Console.log(`Last revision: ${lastRev}`)
     Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
   })
-  ->TaskResult.flatMap(output => {
+  ->Task.flatMap(output => {
     output
     ->String.trim
     ->String.split("\n")
     ->Array.filter(File.exists)
     ->Array.flatMap(handleChange)
-    ->TaskResult.seq
-    ->TaskResult.map(confs => {
+    ->Task.seq
+    ->Task.map(confs => {
       let ints = confs->Array.flatten
       let (_, ints) = ints->Array.reduce(((intsHash, ints), int) => {
         let newHash = int->Hash.hash

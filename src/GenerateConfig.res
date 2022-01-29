@@ -1,18 +1,14 @@
-@send external toString: 'a => string = "toString"
 
 let main = () => {
-  let _ = Mode.load()->Task.map(res =>
-    switch res {
-    | Ok(val) => {
-        val->Gitlab.generate
-        "Ok"->Console.log
-      }
-    | Error(e) => {
-        `Error: ${e->toString}`->Console.log
-        Sys.exit(1)
-      }
-    }
-  )
+  Mode.load()
+  ->Task.map(jobs => {
+    jobs->Gitlab.generate
+    "Ok"->Console.log
+  })
+  ->Task.mapError(msg => {
+    `Error: ${msg}`->Console.log
+    Sys.exit(1)
+  })->ignore
 }
 
 main()

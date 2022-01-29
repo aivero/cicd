@@ -3,14 +3,14 @@ open Instance
 let findAllInts = recursive => {
   let cmd =
     ["git", "ls-files", "**devops.yml"]->Array.concat(recursive ? ["--recurse-submodules"] : [])
-  Proc.run(cmd)->TaskResult.flatMap(e =>
+  Proc.run(cmd)->Task.flatMap(e =>
     e
     ->String.trim
     ->String.split("\n")
     ->Array.map(Config.loadFile)
     ->Result.seq
     ->Result.map(Array.flatten)
-    ->Task.resolve
+    ->Task.fromResult
   )
 }
 
@@ -30,7 +30,7 @@ let rec findReqs = (int, allInts) => {
 }
 
 let addReqs = (ints, allInts) => {
-  TaskResult.seq2((ints, allInts))->TaskResult.flatMap(((ints, allInts)) => {
+  Task.seq2((ints, allInts))->Task.flatMap(((ints, allInts)) => {
     let reqs = ints->Array.flatMap(findReqs(_, allInts))
     let ints =
       reqs
@@ -47,7 +47,7 @@ let addReqs = (ints, allInts) => {
         needs: triggered.needs->Array.concat(triggers),
       }
     })
-    ->TaskResult.resolve
+    ->Task.to
   })
 }
 
@@ -67,12 +67,12 @@ let load = () => {
   let ints = switch (kind, source) {
   | (Some("manual"), _) => allInts->Manual.findInts
   | (Some("git"), _) => Git.findInts()
-  | (Some(mode), _) => Error(`Mode not supported: ${mode}`)->Task.resolve
+  | (Some(mode), _) => `Mode not supported: ${mode}`->Task.toError
   | (None, Some("web")) => allInts->Manual.findInts
   | (None, _) => Git.findInts()
   }
 
   let ints = ints->addReqs(allInts)
 
-  ints->TaskResult.flatMap(Job.load)
+  ints->Task.flatMap(Job.load)
 }

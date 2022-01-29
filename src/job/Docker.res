@@ -103,4 +103,4 @@ let getJobs = (ints: array<Instance.t>) =>
     ])
   })
   ->Result.seq
-  ->Task.resolve
+  ->Task.fromResult
