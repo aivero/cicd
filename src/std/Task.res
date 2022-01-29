@@ -1,42 +1,52 @@
-type t<+'a> = Js.Promise.t<'a>
+type t<'a, 'error> = Async.t<Result.t<'a, 'error>>
 
-type promiseFn<'a, +'b> = 'a => Js.Promise.t<'b>
+let to = t => t->Ok->Async.to
+let toError = t => t->Error->Async.to
+let fromResult = t => t->Async.to
 
-@scope("Promise") @val external seq: array<t<'a>> => t<array<'a>> = "all"
-@scope("Promise") @val external seq2: ((t<'a>, t<'b>)) => t<('a, 'b)> = "all"
-@scope("Promise") @val external seq3: ((t<'a>, t<'b>, t<'c>)) => t<('a, 'b, 'c)> = "all"
-@scope("Promise") @val external seq4: ((t<'a>, t<'b>, t<'c>, t<'d>)) => t<('a, 'b, 'c, 'd)> = "all"
-
-type error = Js.Promise.error
-let resolve = Js.Promise.resolve
-let reject = Js.Promise.reject
-
-@send external toString: 'a => string = "toString"
-@send external catchUnit: (t<'a>, error => unit) => t<'a> = "catch"
-let catch = (a, fn) => Js.Promise.catch(fn, a)
-let flatCatch = (a, fn) => a->catch(e => e->fn->resolve)
-let catchExit = a =>
-  a->catchUnit(e => {
-    `Rejected: ${e->toString}`->Console.log
-    exit(1)
+let flatten = (to: t<t<'a, 'error>, 'error>) => {
+  to->Async.flatMap(r => {
+    switch r {
+    | Ok(ti) => ti
+    | Error(error) => Error(error)->Async.to
+    }
   })
+}
 
-let map = (a, fn) => Js.Promise.then_(v => v->fn->resolve, a)
-let flatMap = (a, fn) => Js.Promise.then_(fn, a)
+let map = (a, fn) => a->Async.map(res => res->Result.map(fn))
+let flatMap = (a, fn) => a->Async.map(res => res->Result.map(fn))->flatten
+let mapError = (a, fn) => a->Async.map(res => res->Result.mapError(fn))
+let flatMapError = (a, fn) => a->Async.map(res => res->Result.mapError(fn))->flatten
 
-@new external new: (('a => unit) => unit) => t<'a> = "Promise"
-@new external newReject: (('a => unit, 'a => unit) => unit) => t<'a> = "Promise"
+let seq = (a: array<t<'a, 'error>>) => a->Async.seq->Async.map(Result.seq)
 
-let sleep = (a, ms) =>
-  a->flatMap(res => (resolve => Js.Global.setTimeout(_ => resolve(res), ms)->ignore)->new)
+let seq2 = ((a1: t<'a, 'error>, a2: t<'b, 'error>)) => (a1, a2)->Async.seq2->Async.map(Result.seq2)
 
-let rec pool = (tasks, count) => {
+let seq3 = ((a1: t<'a, 'error>, a2: t<'b, 'error>, a3: t<'c, 'error>)) =>
+  (a1, a2, a3)->Async.seq3->Async.map(Result.seq3)
+
+let seq4 = ((a1: t<'a, 'error>, a2: t<'b, 'error>, a3: t<'c, 'error>, a4: t<'d, 'error>)) =>
+  (a1, a2, a3, a4)->Async.seq4->Async.map(Result.seq4)
+
+let rec pool = (tasks: array<unit => Async.t<result<'a, string>>>, count): Async.t<
+  result<array<'a>, string>,
+> => {
   let curTasks =
-    tasks->Array.slice(~offset=0, ~len=count)->Array.map(f => (resolve => resolve(f()))->new)->seq
+    tasks
+    ->Array.slice(~offset=0, ~len=count)
+    ->Array.map(f => (resolve => resolve(f()))->Async.new)
+    ->Async.seq
   let rest = tasks->Array.slice(~offset=count, ~len=tasks->Array.length - count)
   `pool: ${rest->Array.length->Int.toString}`->Console.log
-  switch rest->Array.length {
-  | 0 => curTasks
-  | _ => curTasks->flatMap(res1 => rest->pool(count)->map(res2 => [res1, res2]->Array.flatten))
-  }
+  curTasks
+  ->Async.flatMap(res1 => {
+    let tasks = res1->seq
+    tasks->map(res1 =>
+      switch rest->Array.length {
+      | 0 => res1->to
+      | _ => rest->pool(count)->map(res2 => [res1, res2]->Array.flatten)
+      }
+    )
+  })
+  ->flatten
 }
