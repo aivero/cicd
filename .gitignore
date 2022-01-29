@@ -5,3 +5,5 @@ lock.bundle
 .merlin
 generated-config.yml
 *.json
+tmp.js
+tmp.res
