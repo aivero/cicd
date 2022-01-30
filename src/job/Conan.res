@@ -25,29 +25,35 @@ let getArgs = (name, int: Yaml.t) => {
   | None => []
   }
 
-  let sets = switch int->Yaml.get("settings") {
-  | Yaml.Object(sets) =>
-    sets->Dict.map(((key, val)) =>
-      switch val {
-      | Yaml.Bool(true) => (key, "True")
-      | Yaml.Bool(false) => (key, "False")
-      | _ => (key, "False")
-      }
-    )
-  | _ => []
-  }->Array.map(((key, val)) => `-s ${name}:${key}=${val}`)
+  let sets =
+    switch int->Yaml.get("settings") {
+    | Yaml.Object(sets) =>
+      sets->Dict.map(((key, val)) =>
+        switch val {
+        | Yaml.Bool(true) => (key, "True")
+        | Yaml.Bool(false) => (key, "False")
+        | _ => (key, "False")
+        }
+      )
+    | _ => Dict.empty()
+    }
+    ->Dict.toArray
+    ->Array.map(((key, val)) => `-s ${name}:${key}=${val}`)
 
-  let opts = switch int->Yaml.get("options") {
-  | Yaml.Object(opts) =>
-    opts->Dict.map(((key, val)) =>
-      switch val {
-      | Yaml.Bool(true) => (key, "True")
-      | Yaml.Bool(false) => (key, "False")
-      | _ => (key, "False")
-      }
-    )
-  | _ => []
-  }->Array.map(((key, val)) => `-o ${name}:${key}=${val}`)
+  let opts =
+    switch int->Yaml.get("options") {
+    | Yaml.Object(opts) =>
+      opts->Dict.map(((key, val)) =>
+        switch val {
+        | Yaml.Bool(true) => (key, "True")
+        | Yaml.Bool(false) => (key, "False")
+        | _ => (key, "False")
+        }
+      )
+    | _ => Dict.empty()
+    }
+    ->Dict.toArray
+    ->Array.map(((key, val)) => `-o ${name}:${key}=${val}`)
 
   [args, sets, opts]->Array.flatten
 }
@@ -70,6 +76,7 @@ let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanI
     | _ => []
     },
   )
+  ->Dict.fromArray
 }
 
 let init = (ints: array<Instance.t>) => {
@@ -158,41 +165,45 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
         )
       ints
       ->Array.map(int => {
-        {
-          name: `${int.base.name}/${int.base.version}@${int.hash}`,
-          script: None,
-          image: None,
-          services: None,
-          tags: None,
-          variables: Some(int->getVariables->Dict.fromArray),
-          extends: Some(int.extends),
-          needs: int.base.needs
-          ->Array.concat(
-            switch buildOrder[index - 1] {
-            | Some(group) =>
-              group->Array.map(pkg => {
-                switch pkg->String.split("@#") {
-                | [pkg, _] => pkg
-                | _ => "invalid-pkg"
-                }
-              })
-            | None => []
-            },
-          )
-          ->Array.uniq,
-        }
+        Dict.to(
+          `${int.base.name}/${int.base.version}@${int.hash}`,
+          {
+            script: None,
+            image: None,
+            services: None,
+            tags: None,
+            variables: Some(int->getVariables),
+            extends: Some(int.extends),
+            needs: int.base.needs
+            ->Array.concat(
+              switch buildOrder[index - 1] {
+              | Some(group) =>
+                group->Array.map(pkg => {
+                  switch pkg->String.split("@#") {
+                  | [pkg, _] => pkg
+                  | _ => "invalid-pkg"
+                  }
+                })
+              | None => []
+              },
+            )
+            ->Array.uniq,
+          },
+        )
       })
       ->Array.concat([
-        {
-          name: pkg,
-          script: Some(["echo"]),
-          image: None,
-          services: None,
-          tags: Some(["x86_64"]),
-          variables: None,
-          extends: None,
-          needs: ints->Array.map(foundPkg => `${pkg}@${foundPkg.hash}`),
-        },
+        Dict.to(
+          pkg,
+          {
+            script: Some(["echo"]),
+            image: None,
+            services: None,
+            tags: Some(["x86_64"]),
+            variables: None,
+            extends: None,
+            needs: ints->Array.map(foundPkg => `${pkg}@${foundPkg.hash}`),
+          },
+        ),
       ])
     })
   })

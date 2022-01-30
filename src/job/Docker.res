@@ -69,16 +69,18 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
             ]
           : [],
       )
-    {
-      name: `${name}/${version}`,
-      script: Some(script),
-      image: Some("docker:19.03.12"),
-      services: Some(["docker:19.03.12-dind"]),
-      tags: Some(tags),
-      extends: None,
-      variables: None,
-      needs: needs,
-    }
+    Dict.to(
+      `${name}/${version}`,
+      {
+        script: Some(script),
+        image: Some("docker:19.03.12"),
+        services: Some(["docker:19.03.12-dind"]),
+        tags: Some(tags),
+        extends: None,
+        variables: None,
+        needs: needs,
+      },
+    )
   })
 }
 
@@ -90,16 +92,20 @@ let getJobs = (ints: array<Instance.t>) =>
     ints
     ->Array.map(getJob)
     ->Array.concat([
-      Ok({
-        name: `${int.name}/${int.version}`,
-        script: Some(["echo"]),
-        image: None,
-        services: None,
-        tags: None,
-        extends: None,
-        variables: None,
-        needs: ints->Array.map(int => `${int.name}/${int.version}`),
-      }),
+      Ok(
+        Dict.to(
+          `${int.name}/${int.version}`,
+          {
+            script: Some(["echo"]),
+            image: None,
+            services: None,
+            tags: None,
+            extends: None,
+            variables: None,
+            needs: ints->Array.map(int => `${int.name}/${int.version}`),
+          },
+        ),
+      ),
     ])
   })
   ->Result.seq

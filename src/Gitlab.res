@@ -9,41 +9,7 @@ let rec chunk = (array, size) => {
   }
 }
 
-let generateJob = (job: Job_t.t) => {
-  Array.flatten([
-    [`${job.name}:`, `  needs: [${job.needs->Array.join(", ")}]`],
-    switch job.image {
-    | Some(image) => [`  image: ${image}`]
-    | None => []
-    },
-    switch job.extends {
-    | Some(extends) => [`  extends: [${extends->Array.join(", ")}]`]
-    | None => []
-    },
-    switch job.tags {
-    | Some(tags) => [`  tags: [${tags->Array.join(", ")}]`]
-    | None => []
-    },
-    switch job.services {
-    | Some(services) => [`  services: ["${services->Array.join("\", \"")}"]`]
-    | None => []
-    },
-    switch job.variables {
-    | Some(vars) =>
-      ["  variables:"]->Array.concat(
-        vars->Dict.map(((key, val)) => `    ${key}: "${val}"`),
-      )
-    | None => []
-    },
-    switch job.script {
-    | Some(script) => ["  script:"]->Array.concat(script->Array.map(l => `    - ${l}`))
-    | None => []
-    },
-  ])
-}
-
-let base = `
-.conan:
+let base = `.conan:
   variables:
     CONAN_USER_HOME: "$CI_PROJECT_DIR"
     CONAN_DATA_PATH: "$CI_PROJECT_DIR/conan_data"
@@ -88,27 +54,30 @@ let base = `
   image: aivero/conan:focal-armv8-bootstrap
 `
 
-let generate = (jobs: array<Job_t.t>) => {
+let generate = (jobs) => {
   let encode = Encoder.new()->Encoder.encode
   let jobs =
     jobs->Array.empty
       ? [
-          {
-            name: "empty",
-            needs: [],
-            script: Some(["echo"]),
-            image: None,
-            services: None,
-            tags: Some(["x86_64"]),
-            extends: None,
-            variables: None,
-          },
+          Dict.to(
+            "empty",
+            {
+              needs: [],
+              script: Some(["echo"]),
+              image: None,
+              services: None,
+              tags: Some(["x86_64"]),
+              extends: None,
+              variables: None,
+            },
+          ),
         ]
       : jobs
 
   jobs
-  ->Array.flatMap(generateJob)
-  ->Array.join("\n")
+  ->Dict.flatten
+  ->Yaml.classify
+  ->Yaml.stringify
   ->(conf => base ++ conf)
   ->encode
   ->File.write("generated-config.yml")

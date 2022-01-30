@@ -1,5 +1,4 @@
 type t = {
-  name: string,
   extends: option<array<string>>,
   variables: option<Dict.t<string>>,
   image: option<string>,
