@@ -10,8 +10,8 @@ type rec t =
 external _asBool: 'a => bool = "%identity"
 external _asString: 'a => string = "%identity"
 external _asFloat: 'a => float = "%identity"
-external _asArray: 'a => array<t> = "%identity"
-external _asDict: 'a => Dict.t<t> = "%identity"
+external _asArray: 'a => array<'a> = "%identity"
+external _asDict: 'a => Dict.t<'a> = "%identity"
 
 let rec classify = value => {
   switch _internalClass(value) {
@@ -20,7 +20,7 @@ let rec classify = value => {
   | "[object String]" => String(_asString(value))
   | "[object Number]" => Number(_asFloat(value))
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
-  | _ => Object(_asDict(value)->Dict.map(((key, val)) => (key, val->classify))->Dict.fromArray)
+  | _ => Object(_asDict(value)->Dict.map(((key, val)) => (key, val->classify)))
   }
 }
 
@@ -47,19 +47,36 @@ let rec _stringify = (yml, level) =>
   switch yml {
   | String(string) => `"${string}"`
   | Number(float) => float->Float.toString
-  | Object(obj) =>
-    (level != 0 ? "\n" : "") ++
-    obj
-    ->Dict.entries
-    ->Array.map(((key, val)) =>
-      `${"  "->String.repeat(level)}${key}: ${val->_stringify(level + 1)}`
-    )
-    ->Array.join("\n")
+  | Object(obj) => {
+      let entries = obj->Dict.toArray
+      (level == 0 ? "" : "\n") ++
+      entries
+      ->Array.mapWithIndex((i, (key, val)) =>
+        switch val {
+        | Null => ""
+        | Array([]) => ""
+        | _ =>
+          `${"  "->String.repeat(level)}${key}: ${val->_stringify(level + 1)}${i + 1 ==
+              entries->Array.length
+              ? ""
+              : "\n"}`
+        }
+      )
+      ->Array.join("")
+    }
   | Array(array) =>
-    (level != 0 ? "\n" : "") ++
+    (level == 0 ? "" : "\n") ++
     array
-    ->Array.map(val => `${"  "->String.repeat(level)}- ${val->_stringify(level + 1)}`)
-    ->Array.join("\n")
+    ->Array.mapWithIndex((i, val) =>
+      switch val {
+      | Null => ""
+      | _ =>
+        `${"  "->String.repeat(level)}- ${val->_stringify(level + 1)}${i + 1 == array->Array.length
+            ? ""
+            : "\n"}`
+      }
+    )
+    ->Array.join("")
   | Bool(bool) => bool ? "true" : "false"
   | Null => ""
   }
