@@ -3,7 +3,7 @@
   "scripts": {
     "start": "deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6_global/src/generate_config.js",
     "build": "rescript build",
-    "watch": "rescript build -w",
+    "dev": "rescript build -w",
     "clean": "rescript clean"
   },
   "devDependencies": {
