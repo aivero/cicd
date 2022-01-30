@@ -5,6 +5,7 @@
     "~/": "./src/",
     "js/": "./js/",
     "wrap": "./js/wrap.js",
+    "rescript/": "https://raw.githubusercontent.com/redotbo/std/9.1/",
     "std/": "https://deno.land/std@0.96.0/",
     "yaml": "https://deno.land/std@0.96.0/encoding/yaml.ts",
     "path": "https://deno.land/std@0.96.0/path/mod.ts",

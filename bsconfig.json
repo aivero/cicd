@@ -5,5 +5,5 @@
     "dir": "src",
     "subdirs": true
   },
-  "package-specs": "es6-global"
+  "package-specs": "es6"
 }
