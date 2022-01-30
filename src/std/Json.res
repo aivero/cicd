@@ -10,30 +10,30 @@ type rec t =
 external _asBool: 'a => bool = "%identity"
 external _asString: 'a => string = "%identity"
 external _asFloat: 'a => float = "%identity"
-external _asArray: 'a => array<t> = "%identity"
-external _asDict: 'a => Dict.t<t> = "%identity"
+external _asArray: 'a => array<'a> = "%identity"
+external _asDict: 'a => Dict.t<'a> = "%identity"
 
-let rec classify = value => {
+let rec classify = (value: t) => {
   switch _internalClass(value) {
   | "[object Boolean]" => Bool(_asBool(value))
   | "[object Null]" | "[object Undefined]" => Null
   | "[object String]" => String(_asString(value))
   | "[object Number]" => Number(_asFloat(value))
   | "[object Array]" => Array(_asArray(value)->Array.map(elem => elem->classify))
-  | _ => Object(_asDict(value)->Dict.map(((key, val)) => (key, val->classify))->Dict.fromArray)
+  | _ => Object(_asDict(value)->Dict.map(((key, val)) => (key, val->classify)))
   }
 }
 
 module Object = {
-let get = (json: t, key) =>
-  switch json {
-  | Object(dict) =>
-    switch dict->Dict.get(key) {
-    | Some(val) => val
-    | None => Null
+  let get = (json: t, key) =>
+    switch json {
+    | Object(dict) =>
+      switch dict->Dict.get(key) {
+      | Some(val) => val
+      | None => Null
+      }
+    | _ => Null
     }
-  | _ => Null
-  }
 }
 
 module Array = {
@@ -52,5 +52,5 @@ module String = {
     }
 }
 
-@val external _parse: string => t = "JSON.parse"
+@val external _parse: string => 'a = "JSON.parse"
 let parse = string => string->_parse->classify
