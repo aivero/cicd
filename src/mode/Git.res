@@ -46,9 +46,9 @@ let getParentBranch = () => {
 let getLastRev = () =>
   switch Env.get("CI_COMMIT_BEFORE_SHA") {
   | Some("0000000000000000000000000000000000000000") =>
-    getParentBranch()->Task.map(((_, commit)) => commit)
-  | Some(val) => val->Task.to
-  | None => "HEAD^"->Task.to
+    getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
+  | Some(val) => (val, val)->Task.to
+  | None => ("HEAD^", "HEAD^")->Task.to
   }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
@@ -60,10 +60,9 @@ let handleConfigChange = confPath => {
   let intsNew = Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(Config.load(_, confPath))
   let lastRev = getLastRev()
 
-  let filesOld = lastRev->Task.flatMap(lastRev => Proc.run(["git", "ls-tree", "-r", lastRev]))
   let intsOld =
-    (filesOld, lastRev)
-    ->Task.seq2
+    lastRev
+    ->Task.flatMap(((_, lastRev)) => (Proc.run(["git", "ls-tree", "-r", lastRev]), lastRev->Task.to)->Task.seq2)
     ->Task.flatMap(((filesOld, lastRev)) =>
       filesOld->String.includes(confPath)
         ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(Config.load(_, confPath))
@@ -101,9 +100,10 @@ let findInts = () => {
   ->Task.fromResult
   ->Task.flatMap(((branch, commit)) => Proc.run(["git", "checkout", "-B", branch, commit]))
   ->Task.flatMap(_ => getLastRev())
-  ->Task.flatMap(lastRev => {
-    Console.log(`Last revision: ${lastRev}`)
-    Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
+  ->Task.flatMap(((branch, commit)) => {
+    Console.log(`Last branch: ${branch}`)
+    Console.log(`Last commit: ${commit}`)
+    Proc.run(["git", "diff", "--name-only", commit, "HEAD"])
   })
   ->Task.flatMap(output => {
     output
