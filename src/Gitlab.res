@@ -14,9 +14,9 @@ let base = `.conan:
     CONAN_USER_HOME: "$CI_PROJECT_DIR"
     CONAN_DATA_PATH: "$CI_PROJECT_DIR/conan_data"
     GIT_SUBMODULE_STRATEGY: recursive
+    CARGO_HOME=/builds/cache/cargo
+    SCCACHE_DIR=/builds/cache/sccache
   script:
-    - export CARGO_HOME=$PWD/.cargo
-    - export SCCACHE_DIR=$PWD/.cache/sccache
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
     - conan config set general.default_profile=$PROFILE
     - conan config set storage.path=$CONAN_DATA_PATH
@@ -42,8 +42,8 @@ let base = `.conan:
     when: always
   cache:
     paths:
-      - .cargo/
-      - .cache/sccache
+      - $CARGO_HOME
+      - $SCCACHE_DIR
 .conan-x86_64:
   extends: .conan
   tags: [x86_64,aws]
