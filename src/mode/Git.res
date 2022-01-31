@@ -44,11 +44,11 @@ let getParentBranch = () => {
 }
 
 let getLastRev = () =>
-  switch Env.get("CI_COMMIT_BEFORE_SHA") {
-  | Some("0000000000000000000000000000000000000000") =>
+  switch (getCurBranch(), Env.getError("CI_COMMIT_BEFORE_SHA")) {
+  | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
+  | (Ok(_), _) =>
     getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
-  | Some(val) => (val, val)->Task.to
-  | None => ("HEAD^", "HEAD^")->Task.to
+  | _ => "Couldn't find last rev"->Task.toError
   }
 
 let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
