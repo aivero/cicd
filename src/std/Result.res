@@ -16,6 +16,18 @@ let mapError = (r, f) =>
   }
 let flatMapError = (r, f) => r->mapError(f)->flatten
 
+let fold = (r, f) =>
+  switch r {
+  | Error(val) => Ok(val->f)
+  | Ok(y) => Ok(y)
+  }
+
+let flatFold = (r, f) =>
+  switch r {
+  | Error(val) => val->f
+  | Ok(y) => y
+  }
+
 let seq = (a: array<result<'a, 'error>>) => {
   a->Array.reduce((a, e) =>
     switch (a, e) {
