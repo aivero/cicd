@@ -95,8 +95,8 @@ let handleChange = file => {
 
 let findInts = () => {
   Console.log("Git Mode: Create instances from changed files in git")
-  let lastRev = getLastRev()
-  lastRev
+  Proc.run(["git", "checkout", "-B", "$CI_COMMIT_REF_NAME", "$CI_COMMIT_SHA"])
+  ->Task.flatMap(_ => getLastRev())
   ->Task.flatMap(lastRev => {
     Console.log(`Last revision: ${lastRev}`)
     Proc.run(["git", "diff", "--name-only", lastRev, "HEAD"])
