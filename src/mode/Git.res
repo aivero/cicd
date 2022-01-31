@@ -15,7 +15,10 @@ let getMergeBase = (curBranch, branch) => {
       ->Task.fromResult
     )
     ->Task.map(countMergeBase => (countMergeBase, branch, mergeBase))
-  )
+  )->Task.fold(output => {
+    Console.log(`Branch "${branch}" failed with output: \n${output}`)
+    (99999, "00000000000", branch)
+  })
 }
 
 let getParentBranch = () => {
