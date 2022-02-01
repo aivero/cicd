@@ -1,4 +1,4 @@
-open Job_t
+open Jobt
 
 let rec chunk = (array, size) => {
   let cur = array->Array.slice(~offset=0, ~len=size)

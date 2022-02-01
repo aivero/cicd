@@ -1,5 +1,5 @@
 open Instance
-open! Job_t
+open! Jobt
 
 type conanInstance = {
   base: Instance.t,

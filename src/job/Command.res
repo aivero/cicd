@@ -1,5 +1,5 @@
 open Instance
-open! Job_t
+open! Jobt
 
 let getJobs = (ints: array<Instance.t>) => {
   ints
