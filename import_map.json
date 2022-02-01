@@ -5,12 +5,12 @@
     "~/": "./src/",
     "js/": "./js/",
     "wrap": "./js/wrap.js",
-    "rescript/": "https://raw.githubusercontent.com/redotbo/std/9.1/",
+    "rescript/": "https://github.com/prefixre/runtime/raw/9.1/",
     "std/": "https://deno.land/std@0.96.0/",
     "yaml": "https://deno.land/std@0.96.0/encoding/yaml.ts",
     "path": "https://deno.land/std@0.96.0/path/mod.ts",
     "log": "https://deno.land/std@0.96.0/log/mod.ts",
-    "hash": "https://raw.githubusercontent.com/noverby/object-hash/master/mod.ts",
+    "hash": "https://github.com/noverby/object-hash/raw/master/mod.ts",
     "fs": "https://deno.land/std@0.96.0/fs/mod.ts",
     "fun/": "https://deno.land/x/fun@v1.0.0/"
   }
