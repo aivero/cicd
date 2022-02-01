@@ -19,6 +19,7 @@ child-pipeline-manual:
     include:
       - artifact: generated-config.yml
         job: generate-config-manual
+      strategy: depend
 generate-config-git:
   image: $CICD_DOCKER_IMAGE
   stage: build
