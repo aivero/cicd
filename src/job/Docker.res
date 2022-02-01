@@ -79,6 +79,7 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
         extends: None,
         variables: None,
         needs: needs,
+        cache: None,
       },
     )
   })
@@ -103,6 +104,7 @@ let getJobs = (ints: array<Instance.t>) =>
             extends: None,
             variables: None,
             needs: ints->Array.map(int => `${int.name}/${int.version}`),
+            cache: None,
           },
         ),
       ),

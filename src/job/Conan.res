@@ -188,6 +188,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
               },
             )
             ->Array.uniq,
+            cache: None,
           },
         )
       })
@@ -202,6 +203,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             variables: None,
             extends: None,
             needs: ints->Array.map(foundPkg => `${pkg}@${foundPkg.hash}`),
+            cache: None,
           },
         ),
       ])

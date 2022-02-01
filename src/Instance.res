@@ -1,3 +1,5 @@
+open Jobt
+
 type set = {
   set: string,
   val: string,
@@ -33,6 +35,7 @@ type t = {
   afterScript: array<string>,
   image: option<string>,
   tags: array<string>,
+  cache: option<Jobt.cache>,
 }
 
 let parseMode = str => {
@@ -153,6 +156,18 @@ let create = (int: Yaml.t, folderPath): t => {
   | Yaml.String(cmd) => [cmd]
   | _ => []
   }
+  let cache = switch int->Yaml.get("cache")->Yaml.get("paths") {
+  | Yaml.Array(paths) => {
+      let paths = paths->Array.reduce((paths, path) =>
+        switch path {
+        | Yaml.String(path) => paths->Array.concat([path])
+        | _ => []
+        }
+      , [])
+      Some({ paths, })
+    }
+  | _ => None
+  }
   {
     name: name,
     version: version,
@@ -170,5 +185,6 @@ let create = (int: Yaml.t, folderPath): t => {
     profiles: profiles,
     image: image,
     tags: tags,
+    cache: cache,
   }
 }

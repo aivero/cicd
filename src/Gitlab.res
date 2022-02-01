@@ -76,6 +76,7 @@ let generate = (jobs) => {
               tags: Some(["x86_64"]),
               extends: None,
               variables: None,
+              cache: None,
             },
           ),
         ]

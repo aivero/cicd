@@ -17,6 +17,7 @@ let getJobs = (ints: array<Instance.t>) => {
           extends: None,
           services: None,
           needs: needs->Array.uniq,
+          cache: None,
         },
       )
     )
@@ -31,6 +32,7 @@ let getJobs = (ints: array<Instance.t>) => {
           extends: None,
           services: None,
           needs: profiles->Array.map(profile => `${name}/${version}-${profile}`),
+          cache: None,
         },
       ),
     ])

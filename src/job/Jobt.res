@@ -1,3 +1,7 @@
+type cache = {
+  paths: array<string>
+}
+
 type t = {
   extends: option<array<string>>,
   variables: option<Dict.t<string>>,
@@ -6,4 +10,5 @@ type t = {
   script: option<array<string>>,
   needs: array<string>,
   services: option<array<string>>,
+  cache: option<cache>
 }
