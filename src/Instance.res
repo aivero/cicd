@@ -57,6 +57,8 @@ let create = (int: Yaml.t, folderPath): t => {
   | (_, Some(sha)) => sha
   | _ => "0.0.0"
   }
+  // Conan has a 50 char limit for versions
+  let version = version->String.slice(~from=0, ~to_=50)
   let folder = switch int->Yaml.get("folder") {
   | Yaml.String(folder) => Path.join([folderPath, folder])
   | _ => folderPath
