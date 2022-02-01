@@ -160,7 +160,7 @@ let create = (int: Yaml.t, folderPath): t => {
   | Yaml.Array(paths) => {
       let paths = paths->Array.reduce((paths, path) =>
         switch path {
-        | Yaml.String(path) => paths->Array.concat([path])
+        | Yaml.String(path) => paths->Array.concat([Path.join([folder, path])])
         | _ => []
         }
       , [])
