@@ -48,17 +48,17 @@ let base = `.conan:
 .conan-x86_64:
   extends: .conan
   tags: [x86_64,aws]
-  image: aivero/conan:focal-x86_64
+  image: registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-dockerfile:master
 .conan-armv8:
   extends: .conan
   tags: [armv8,aws]
-  image: aivero/conan:focal-armv8
+  image: registry.gitlab.com/aivero/open-source/contrib/focal-armv8-dockerfile:master
 .conan-x86_64-bootstrap:
   extends: .conan-x86_64
-  image: aivero/conan:focal-x86_64-bootstrap
+  image: registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-bootstrap-dockerfile:master
 .conan-armv8-bootstrap:
   extends: .conan-armv8
-  image: aivero/conan:focal-armv8-bootstrap
+  image: registry.gitlab.com/aivero/open-source/contrib/focal-armv8-bootstrap-dockerfile:master
 `
 
 let generate = (jobs) => {
