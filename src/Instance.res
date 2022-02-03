@@ -15,8 +15,6 @@ type mode = [
   | #docker
   | #command
 ]
-//| #"conan-install-tarball"
-//| #"conan-install-script"
 
 type t = {
   name: string,
@@ -43,6 +41,14 @@ let parseMode = str => {
   | "conan" => #conan
   | "docker" => #docker
   | _ => #command
+  }
+}
+
+let modeToString = mode => {
+  switch mode {
+  | #conan => "conan"
+  | #docker => "docker"
+  | #command => "command"
   }
 }
 

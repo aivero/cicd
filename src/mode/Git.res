@@ -133,7 +133,7 @@ let findInts = () => {
         intsHash->Array.some(oldHash => oldHash == newHash)
           ? (intsHash, ints)
           : {
-              `Found instance: ${int.name}/${int.version} (${newHash})`->Console.log
+              `Found instance: ${int.name}/${int.version} (mode: ${int.mode->Instance.modeToString}) (${newHash})`->Console.log
               (intsHash->Array.concat([newHash]), ints->Array.concat([int]))
             }
       }, ([], []))
