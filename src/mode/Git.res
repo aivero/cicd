@@ -88,7 +88,7 @@ let handleFileChange = (confPath, filePath) => {
   ->Config.loadFile
   ->Result.map(
     Array.filter(_, ({folder}) => {
-      let match = folder->String.endsWith(filePath->Path.dirname)
+      let match = folder->String.startsWith(filePath->Path.dirname)
       `${folder}: ${match->Bool.toString}`->Console.log
       match
     }),
