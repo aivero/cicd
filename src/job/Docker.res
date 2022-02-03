@@ -8,7 +8,11 @@ type dockerInstance = {
   folder: string,
   tags: array<string>,
   needs: array<string>,
+  hash: string,
 }
+
+let hashLength = 3
+let hashN = Hash.hashN(_, hashLength)
 
 let getName = (file, folder) => {
   switch (file->String.split("."))[0] {
@@ -18,37 +22,39 @@ let getName = (file, folder) => {
   }
 }
 
-let getInstances = ({name, version, folder, modeInt, tags, needs}: Instance.t): array<
+let getInstances = (int: Instance.t): array<
   dockerInstance,
 > => {
-  let file = switch modeInt->Yaml.get("file") {
+  let file = switch int.modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
   }
+  let hash = int->hashN
   switch file {
   | Some(file) => [
-      {name: name, tagName: name, version: version, file: file, folder: folder, tags: tags, needs: needs},
+      {name: int.name, tagName: int.name, version: int.version, file: file, folder: int.folder, tags: int.tags, needs: int.needs, hash: hash},
     ]
   | None =>
-    Path.read(folder)
+    Path.read(int.folder)
     ->Array.filter(file => file.name->String.includes("Dockerfile"))
     ->Array.map(file => {
       name: switch (file.name->String.split("."))[0] {
-      | Some("Dockerfile") => `${name}-dockerfile`
-      | Some(name) => `${name}-dockerfile`
-      | _ => `${name}-dockerfile`
+      | Some("Dockerfile") => int.name
+      | Some(name) => name
+      | _ => int.name
       },
-      tagName: name,
-      version: version,
+      tagName: int.name,
+      version: int.version,
       file: file.name,
-      folder: folder,
+      folder: int.folder,
       tags: ["gitlab-org-docker"],
-      needs: needs,
+      needs: int.needs,
+      hash: hash
     })
   }
 }
 
-let getJob = ({name, tagName, version, file, folder, tags, needs}: dockerInstance) => {
+let getJob = ({name, tagName, version, file, folder, tags, needs, hash}: dockerInstance) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
@@ -72,7 +78,7 @@ let getJob = ({name, tagName, version, file, folder, tags, needs}: dockerInstanc
           : [],
       )
     Dict.to(
-      `${name}/${version}`,
+      `${name}/${version}@${hash}`,
       {
         script: Some(script),
         image: Some("docker:19.03.12"),
@@ -105,7 +111,7 @@ let getJobs = (ints: array<Instance.t>) =>
             tags: None,
             extends: None,
             variables: None,
-            needs: ints->Array.map(int => `${int.name}/${int.version}`),
+            needs: ints->Array.map(int => `${int.name}/${int.version}@${int.hash}`),
             cache: None,
           },
         ),
