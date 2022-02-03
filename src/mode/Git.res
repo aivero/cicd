@@ -70,7 +70,7 @@ let handleConfigChange = confPath => {
       (Proc.run(["git", "ls-tree", "-r", lastRev]), lastRev->Task.to)->Task.seq2
     )
     ->Task.flatMap(((filesOld, lastRev)) =>
-      filesOld->String.includes(confPath)
+      filesOld->String.includes(`\t${confPath}`)
         ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(Config.load(_, confPath))
         : []->Task.to
     )
