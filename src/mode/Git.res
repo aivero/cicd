@@ -60,6 +60,7 @@ let cmpInts = (intsNew: array<Instance.t>, intsOld: array<Instance.t>) => {
 }
 
 let handleConfigChange = confPath => {
+  `Config changed: ${confPath}`->Console.log
   let intsNew = Proc.run(["git", "show", `HEAD:${confPath}`])->Task.map(Config.load(_, confPath))
   let lastRev = getLastRev()
 
@@ -80,6 +81,7 @@ let handleConfigChange = confPath => {
 }
 
 let handleFileChange = (confPath, filePath) => {
+  `File changed: ${filePath}`->Console.log
   confPath
   ->Config.loadFile
   ->Result.map(Array.filter(_, ({folder}) => folder->String.endsWith(filePath->Path.dirname)))
