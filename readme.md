@@ -48,6 +48,30 @@ Additional Conan settings
        wayland: true
 ```
 
+### Docker
+File setting
+```yaml
+- 
+  name: image-name-1
+  version: '0.0.1'
+  docker:
+    file: <path-to-docker-file1>.Dockerfile
+- 
+  name: image-name-2
+  version: '0.0.1'
+  docker:
+    file: <path-to-docker-file2>.Dockerfile
+```
+Create docker instances from all files in current directory
+
+The name will be set from the file
+
+E.g `file-name.Dockerfile` will get the name `file-name`
+
+```yaml
+- version: '0.0.1'
+```
+
 ## Development Commands
 ```
 yarn # Install rescript
