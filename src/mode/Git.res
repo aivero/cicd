@@ -15,7 +15,8 @@ let getMergeBase = (curBranch, branch) => {
       ->Task.fromResult
     )
     ->Task.map(countMergeBase => (countMergeBase, branch, mergeBase))
-  )->Task.fold(output => {
+  )
+  ->Task.fold(output => {
     Console.log(`Branch "${branch}" failed with output: \n${output}`)
     (99999, "00000000000", branch)
   })
@@ -49,8 +50,7 @@ let getParentBranch = () => {
 let getLastRev = () =>
   switch (getCurBranch(), Env.getError("CI_COMMIT_BEFORE_SHA")) {
   | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
-  | (Ok(_), _) =>
-    getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
+  | (Ok(_), _) => getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
   | _ => "Couldn't find last rev"->Task.toError
   }
 
@@ -66,7 +66,9 @@ let handleConfigChange = confPath => {
 
   let intsOld =
     lastRev
-    ->Task.flatMap(((_, lastRev)) => (Proc.run(["git", "ls-tree", "-r", lastRev]), lastRev->Task.to)->Task.seq2)
+    ->Task.flatMap(((_, lastRev)) =>
+      (Proc.run(["git", "ls-tree", "-r", lastRev]), lastRev->Task.to)->Task.seq2
+    )
     ->Task.flatMap(((filesOld, lastRev)) =>
       filesOld->String.includes(confPath)
         ? Proc.run(["git", "show", `${lastRev}:${confPath}`])->Task.map(Config.load(_, confPath))
@@ -84,7 +86,13 @@ let handleFileChange = (confPath, filePath) => {
   `File changed: ${filePath}`->Console.log
   confPath
   ->Config.loadFile
-  ->Result.map(Array.filter(_, ({folder}) => folder->String.endsWith(filePath->Path.dirname)))
+  ->Result.map(
+    Array.filter(_, ({folder}) => {
+      let match = folder->String.endsWith(filePath->Path.dirname)
+      `${folder}: ${match->Bool.toString}`->Console.log
+      match
+    }),
+  )
   ->Task.fromResult
 }
 
