@@ -49,6 +49,7 @@ let getParentBranch = () => {
 
 let getLastRev = () =>
   switch (getCurBranch(), Env.getError("CI_COMMIT_BEFORE_SHA")) {
+  | (Ok("master"), Ok("0000000000000000000000000000000000000000")) => ("master", "HEAD^")->Task.to
   | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
   | (Ok(_), _) => getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
   | _ => "Couldn't find last rev"->Task.toError
