@@ -55,7 +55,6 @@ let load = () => {
   let kind = Env.get("mode")
   let component = Env.get("component")
   let recursive = Env.get("recursive")
-  let source = Env.get("CI_PIPELINE_SOURCE")
 
   let recursive = switch recursive {
   | Some("true") | Some("1") => true
@@ -65,12 +64,12 @@ let load = () => {
 
   let allInts = recursive->findAllInts
 
-  let ints = switch (kind, source, component) {
-  | (Some("manual"), _, _) => allInts->Manual.findInts
-  | (Some("git"), _, _) => Git.findInts()
-  | (Some(mode), _, _) => `Mode not supported: ${mode}`->Task.toError
-  | (None, Some("web"), Some(_)) => allInts->Manual.findInts
-  | (None, _, _) => Git.findInts()
+  let ints = switch (kind, component) {
+  | (Some("manual"), _) => allInts->Manual.findInts
+  | (Some("git"), _) => Git.findInts()
+  | (Some(mode), _) => `Mode not supported: ${mode}`->Task.toError
+  | (None, Some(_)) => allInts->Manual.findInts
+  | (None,_) => Git.findInts()
   }
 
   let ints = ints->addReqs(allInts)
