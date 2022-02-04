@@ -1,5 +1,6 @@
 {
   "license": "MIT",
+  "private": true,
   "scripts": {
     "start": "deno run --unstable --allow-all --import-map ./import_map.json ./lib/es6/src/GenerateConfig.js",
     "build": "rescript build",
