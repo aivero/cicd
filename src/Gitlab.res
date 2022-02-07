@@ -16,7 +16,7 @@ let base = `.conan:
     GIT_SUBMODULE_STRATEGY: recursive
     CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
     SCCACHE_DIR: "$CI_PROJECT_DIR/.sccache"
-    GIT_CLEAN_FLAGS: -x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**
+    GIT_CLEAN_FLAGS: -x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/** -e $CONAN_DATA_PATH/**
   script:
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
     - conan config set general.default_profile=$PROFILE
@@ -42,9 +42,13 @@ let base = `.conan:
       - "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log"
     when: always
   cache:
-    paths:
-      - $CARGO_HOME
-      - $SCCACHE_DIR
+    - key: $CI_PIPELINE_ID
+      paths:
+        - $CONAN_DATA_PATH
+    - key: $CI_RUNNER_EXECUTABLE_ARCH
+      paths:
+        - $CARGO_HOME
+        - $SCCACHE_DIR
 .conan-x86_64:
   extends: .conan
   tags: [x86_64,aws]

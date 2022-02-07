@@ -70,12 +70,6 @@ let getRepo = folder => {
 let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanInstance) => {
   [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
-  ->Array.concat(
-    switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
-    | Some(_) => [("UPLOAD_ALIAS", "1")]
-    | _ => []
-    },
-  )
   ->Dict.fromArray
 }
 
@@ -153,7 +147,8 @@ let getExtends = ((profile, bootstrap)) => {
 }
 
 let getJob = (ints: array<conanInstance>, buildOrder) => {
-  buildOrder->Array.flatMapWithIndex((index, group) => {
+  buildOrder
+  ->Array.flatMapWithIndex((index, group) => {
     group->Array.flatMap(pkg => {
       let (pkg, pkgRevision) = switch pkg->String.split("@#") {
       | [pkg, pkgRevision] => (pkg, pkgRevision)
@@ -209,6 +204,65 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
       ])
     })
   })
+  ->Array.concat([
+    Dict.to(
+      "conan-upload",
+      {
+        script: {
+          buildOrder
+          ->Array.flatten
+          ->Array.map(pkg => {
+            switch pkg->String.split("@#") {
+            | [pkg, _] =>
+              switch (
+                pkg->String.split("/"),
+                ints->Array.find(({ base: { name, version } }) => pkg->String.startsWith(`${name}/${version}`)),
+              ) {
+              | ([name, version], Some(int)) => (name, version, int.repo)
+              | _ => ("invalid-name", "invalid-version", "")
+              }
+            | _ => ("invalid-name", "invalid-version", "")
+            }
+          })
+          ->Array.flatMap(((name, version, repo)) => {
+            [`conan upload ${name}/${version}@ --all -c -r ${repo}`]->Array.concat(
+              switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
+              | Some(_) => [`conan upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`]
+              | _ => []
+              },
+            )
+          })
+          ->Some
+        },
+        image: Some(
+          "registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-dockerfile:master",
+        ),
+        services: None,
+        tags: None,
+        variables: Some(
+          Dict.fromArray([
+            ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
+            ("GIT_CLEAN_FLAGS", "-x -f -e $CONAN_DATA_PATH/**"),
+          ]),
+        ),
+        extends: None,
+        needs: switch buildOrder[buildOrder->Array.length - 1] {
+        | Some(needs) =>
+          needs->Array.map(need =>
+            switch need->String.split("@#") {
+            | [need, _] => need
+            | _ => "invalid_need"
+            }
+          )
+        | None => []
+        },
+        cache: Some({
+          key: Some("$CI_PIPELINE_ID"),
+          paths: ["$CONAN_DATA_PATH"],
+        }),
+      },
+    ),
+  ])
 }
 
 let getConanInstances = (int: Instance.t) => {
