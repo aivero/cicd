@@ -41,13 +41,13 @@ let base = `.conan:
       - "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log"
     when: always
   cache:
-    - key: $CI_PIPELINE_ID
+    - key: "$CI_PIPELINE_ID"
       paths:
-        - $CONAN_DATA_PATH
-    - key: $CI_RUNNER_EXECUTABLE_ARCH
+        - "$CONAN_DATA_PATH"
+    - key: "$CI_RUNNER_EXECUTABLE_ARCH"
       paths:
-        - $CARGO_HOME
-        - $SCCACHE_DIR
+        - "$CARGO_HOME"
+        - "$SCCACHE_DIR"
 .conan-x86_64:
   extends: .conan
   tags: [x86_64,aws]
