@@ -24,6 +24,7 @@ let base = `.conan:
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
+    - conan remove --locks
     - conan create -u $FOLDER $NAME/$VERSION@ $ARGS
   retry:
     max: 2
