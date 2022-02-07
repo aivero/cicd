@@ -249,7 +249,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           "registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-dockerfile:master",
         ),
         services: None,
-        tags: None,
+        tags: Some(["x86_64", "aws"]),
         variables: Some(
           Dict.fromArray([
             ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
