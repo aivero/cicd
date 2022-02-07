@@ -209,29 +209,40 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
       "conan-upload",
       {
         script: {
-          buildOrder
-          ->Array.flatten
-          ->Array.map(pkg => {
-            switch pkg->String.split("@#") {
-            | [pkg, _] =>
-              switch (
-                pkg->String.split("/"),
-                ints->Array.find(({ base: { name, version } }) => pkg->String.startsWith(`${name}/${version}`)),
-              ) {
-              | ([name, version], Some(int)) => (name, version, int.repo)
+          [
+            "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
+            "conan config set storage.path=$CONAN_DATA_PATH",
+            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL",
+            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL",
+            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC",
+          ]
+          ->Array.concat(
+            buildOrder
+            ->Array.flatten
+            ->Array.map(pkg => {
+              switch pkg->String.split("@#") {
+              | [pkg, _] =>
+                switch (
+                  pkg->String.split("/"),
+                  ints->Array.find(({base: {name, version}}) =>
+                    pkg->String.startsWith(`${name}/${version}`)
+                  ),
+                ) {
+                | ([name, version], Some(int)) => (name, version, int.repo)
+                | _ => ("invalid-name", "invalid-version", "")
+                }
               | _ => ("invalid-name", "invalid-version", "")
               }
-            | _ => ("invalid-name", "invalid-version", "")
-            }
-          })
-          ->Array.flatMap(((name, version, repo)) => {
-            [`conan upload ${name}/${version}@ --all -c -r ${repo}`]->Array.concat(
-              switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
-              | Some(_) => [`conan upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`]
-              | _ => []
-              },
-            )
-          })
+            })
+            ->Array.flatMap(((name, version, repo)) => {
+              [`conan upload ${name}/${version}@ --all -c -r ${repo}`]->Array.concat(
+                switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
+                | Some(_) => [`conan upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`]
+                | _ => []
+                },
+              )
+            }),
+          )
           ->Some
         },
         image: Some(
