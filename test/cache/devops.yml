@@ -1,0 +1,8 @@
+- version: 1.0.0
+  script:
+    - echo Hello world!
+  cache:
+    key: cache-key
+    paths:
+      - folder1
+      - folder2

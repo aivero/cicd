@@ -1,4 +1,5 @@
 type cache = {
+  key: option<string>,
   paths: array<string>
 }
 

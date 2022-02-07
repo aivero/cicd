@@ -4,7 +4,7 @@ open! Jobt
 let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
-  ->Array.flatMap(({name, version, image, script, needs, profiles, folder}) => {
+  ->Array.flatMap(({name, version, image, script, needs, profiles, folder, cache}) => {
     profiles
     ->Array.map(profile =>
       Dict.to(
@@ -17,7 +17,7 @@ let getJobs = (ints: array<Instance.t>) => {
           extends: None,
           services: None,
           needs: needs->Array.uniq,
-          cache: None,
+          cache: cache,
         },
       )
     )

@@ -165,15 +165,25 @@ let create = (int: Yaml.t, folderPath): t => {
   | Yaml.String(cmd) => [cmd]
   | _ => []
   }
-  let cache = switch int->Yaml.get("cache")->Yaml.get("paths") {
-  | Yaml.Array(paths) => {
+  let cache = int->Yaml.get("cache")
+  let cache = switch (cache->Yaml.get("key"), cache->Yaml.get("paths")) {
+  | (Yaml.String(key), Yaml.Array(paths)) => {
       let paths = paths->Array.reduce((paths, path) =>
         switch path {
         | Yaml.String(path) => paths->Array.concat([Path.join([folder, path])])
         | _ => []
         }
       , [])
-      Some({ paths, })
+      Some({ key: Some(key), paths, })
+    }
+  | (_, Yaml.Array(paths)) => {
+      let paths = paths->Array.reduce((paths, path) =>
+        switch path {
+        | Yaml.String(path) => paths->Array.concat([Path.join([folder, path])])
+        | _ => []
+        }
+      , [])
+      Some({ key: None, paths, })
     }
   | _ => None
   }
