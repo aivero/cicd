@@ -16,16 +16,18 @@ let base = `.conan:
     GIT_SUBMODULE_STRATEGY: recursive
     CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
     SCCACHE_DIR: "$CI_PROJECT_DIR/.sccache"
-    GIT_CLEAN_FLAGS: -x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/** -e $CONAN_DATA_PATH/**
+    GIT_CLEAN_FLAGS: -x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**
   script:
     - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
     - conan config set general.default_profile=$PROFILE
     - conan config set storage.path=$CONAN_DATA_PATH
     - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC
-    - conan remove --locks
+    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL
+    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL
+    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC
     - conan create -u $FOLDER $NAME/$VERSION@ $ARGS
+    - conan upload $NAME/$VERSION@ --all -c -r $REPO
+    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO"
   retry:
     max: 2
     when:
@@ -41,13 +43,10 @@ let base = `.conan:
       - "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log"
     when: always
   cache:
-    - key: "$CI_PIPELINE_ID"
-      paths:
-        - "$CONAN_DATA_PATH"
-    - key: "$CI_RUNNER_EXECUTABLE_ARCH"
-      paths:
-        - "$CARGO_HOME"
-        - "$SCCACHE_DIR"
+    key: "$CI_RUNNER_EXECUTABLE_ARCH"
+    paths:
+      - "$CARGO_HOME"
+      - "$SCCACHE_DIR"
 .conan-x86_64:
   extends: .conan
   tags: [x86_64,aws]

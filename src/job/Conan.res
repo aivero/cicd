@@ -8,6 +8,7 @@ type conanInstance = {
   revision: string,
   profile: string,
   repo: string,
+  repoDev: string,
   args: array<string>,
 }
 
@@ -58,18 +59,26 @@ let getArgs = (name, int: Yaml.t) => {
   [args, sets, opts]->Array.flatten
 }
 
-let getRepo = folder => {
+let getRepos = folder => {
   [folder, "conanfile.py"]
   ->Path.join
   ->File.read
   ->Result.map(content =>
-    content->String.includes("Proprietary") ? "$CONAN_REPO_INTERNAL" : "$CONAN_REPO_PUBLIC"
+    content->String.includes("Proprietary")
+      ? ("$CONAN_REPO_INTERNAL", "$CONAN_REPO_DEV_INTERNAL")
+      : ("$CONAN_REPO_PUBLIC", "$CONAN_REPO_DEV_PUBLIC")
   )
 }
 
 let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanInstance) => {
   [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
+  ->Array.concat(
+    switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
+    | Some(_) => [("UPLOAD_ALIAS", "1")]
+    | _ => []
+    },
+  )
   ->Dict.fromArray
 }
 
@@ -89,12 +98,14 @@ let init = (ints: array<Instance.t>) => {
 
   config
   ->Task.flatMap(_ =>
-    ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD", "CONAN_REPO_ALL")
-    ->Tuple.map3(Env.getError)
-    ->Result.seq3
+    ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD", "CONAN_REPO_ALL", "CONAN_REPO_DEV_ALL")
+    ->Tuple.map4(Env.getError)
+    ->Result.seq4
     ->Task.fromResult
-    ->Task.map(((user, passwd, repo)) =>
-      Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])
+    ->Task.map(((user, passwd, repo, repo_dev)) =>
+      Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])->Task.flatMap(_ =>
+        Proc.run(["conan", "user", user, "-p", passwd, "-r", repo_dev])
+      )
     )
   )
   ->Task.flatMap(_ =>
@@ -212,9 +223,10 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           [
             "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
             "conan config set storage.path=$CONAN_DATA_PATH",
-            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL",
             "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL",
             "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC",
+            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
+            "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
           ]
           ->Array.concat(
             buildOrder
@@ -228,16 +240,22 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
                     pkg->String.startsWith(`${name}/${version}`)
                   ),
                 ) {
-                | ([name, version], Some(int)) => (name, version, int.repo)
-                | _ => ("invalid-name", "invalid-version", "")
+                | ([name, version], Some(int)) => (name, version, int.repo, int.repoDev)
+                | _ => ("invalid-name", "invalid-version", "", "")
                 }
-              | _ => ("invalid-name", "invalid-version", "")
+              | _ => ("invalid-name", "invalid-version", "", "")
               }
             })
-            ->Array.flatMap(((name, version, repo)) => {
-              [`conan upload ${name}/${version}@ --all -c -r ${repo}`]->Array.concat(
+            ->Array.flatMap(((name, version, repo, repoDev)) => {
+              [
+                `conan download ${name}/${version}@ -r ${repoDev}`,
+                `conan upload ${name}/${version}@ --all -c -r ${repo}`,
+              ]->Array.concat(
                 switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
-                | Some(_) => [`conan upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`]
+                | Some(_) => [
+                    `conan download ${name}/$CI_COMMIT_REF_NAME@ -r ${repoDev}`,
+                    `conan upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`,
+                  ]
                 | _ => []
                 },
               )
@@ -250,12 +268,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
         ),
         services: None,
         tags: Some(["x86_64", "aws"]),
-        variables: Some(
-          Dict.fromArray([
-            ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
-            ("GIT_CLEAN_FLAGS", "-x -f -e $CONAN_DATA_PATH/**"),
-          ]),
-        ),
+        variables: None,
         extends: None,
         needs: switch buildOrder[buildOrder->Array.length - 1] {
         | Some(needs) =>
@@ -267,10 +280,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           )
         | None => []
         },
-        cache: Some({
-          key: Some("$CI_PIPELINE_ID"),
-          paths: ["$CONAN_DATA_PATH"],
-        }),
+        cache: None,
       },
     ),
   ])
@@ -278,19 +288,20 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
 
 let getConanInstances = (int: Instance.t) => {
   let {name, version, folder, modeInt} = int
-  let repo = folder->getRepo
+  let repos = folder->getRepos
   let args = name->getArgs(modeInt)
 
   int.profiles
   ->Array.map(profile => {
     let extends = (profile, int.bootstrap)->getExtends
-    (extends, repo)
+    (extends, repos)
     ->Result.seq2
     ->Task.fromResult
-    ->Task.flatMap(((extends, repo)) => {
+    ->Task.flatMap(((extends, (repo, repoDev))) => {
       let hash = {
         base: int,
         repo: repo,
+        repoDev: repoDev,
         args: args,
         extends: extends,
         profile: profile,
@@ -332,6 +343,7 @@ let getConanInstances = (int: Instance.t) => {
           base: int,
           revision: revision,
           repo: repo,
+          repoDev: repoDev,
           extends: extends,
           args: args,
           profile: profile,
