@@ -3,7 +3,6 @@ open! Jobt
 type dockerInstance = {
   name: string,
   version: string,
-  tagName: string,
   file: string,
   folder: string,
   tags: array<string>,
@@ -32,7 +31,7 @@ let getInstances = (int: Instance.t): array<
   let hash = int->hashN
   switch file {
   | Some(file) => [
-      {name: int.name, tagName: int.name, version: int.version, file: file, folder: int.folder, tags: int.tags, needs: int.needs, hash: hash},
+      {name: int.name, version: int.version, file: file, folder: int.folder, tags: int.tags, needs: int.needs, hash: hash},
     ]
   | None =>
     Path.read(int.folder)
@@ -43,7 +42,6 @@ let getInstances = (int: Instance.t): array<
       | Some(name) => name
       | _ => int.name
       },
-      tagName: int.name,
       version: int.version,
       file: file.name,
       folder: int.folder,
@@ -54,12 +52,12 @@ let getInstances = (int: Instance.t): array<
   }
 }
 
-let getJob = ({name, tagName, version, file, folder, tags, needs, hash}: dockerInstance) => {
+let getJob = ({name, version, file, folder, tags, needs, hash}: dockerInstance) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
   ->Result.map(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${tagName}`
+    let dockerTag = `${registry}${prefix}${name}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => true
     | _ => false
