@@ -264,7 +264,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           ->Some
         },
         image: Some(
-          "registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-dockerfile:master",
+          "registry.gitlab.com/aivero/open-source/contrib/focal-x86_64:master",
         ),
         services: None,
         tags: Some(["x86_64", "aws"]),
