@@ -70,8 +70,8 @@ let getRepos = folder => {
   )
 }
 
-let getVariables = ({base: {name, version, folder}, profile, args, repo}: conanInstance) => {
-  [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repo), ("PROFILE", profile)]
+let getVariables = ({base: {name, version, folder}, profile, args, repoDev}: conanInstance) => {
+  [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repoDev), ("PROFILE", profile)]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
     switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
