@@ -71,7 +71,13 @@ let getRepos = folder => {
 }
 
 let getVariables = ({base: {name, version, folder}, profile, args, repoDev}: conanInstance) => {
-  [("NAME", name), ("VERSION", version), ("FOLDER", folder), ("REPO", repoDev), ("PROFILE", profile)]
+  [
+    ("NAME", name),
+    ("VERSION", version),
+    ("FOLDER", folder),
+    ("REPO", repoDev),
+    ("PROFILE", profile),
+  ]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
     switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
@@ -219,7 +225,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
     Dict.to(
       "conan-upload",
       {
-        script: {
+        script: Some(
           [
             "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
             "conan config set storage.path=$CONAN_DATA_PATH",
@@ -227,11 +233,10 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC",
             "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
             "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
-          ]
-          ->Array.concat(
+          ]->Array.concat(
             buildOrder
             ->Array.flatten
-            ->Array.map(pkg => {
+            ->Array.reduce((pkgs, pkg) => {
               switch pkg->String.split("@#") {
               | [pkg, _] =>
                 switch (
@@ -240,12 +245,13 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
                     pkg->String.startsWith(`${name}/${version}`)
                   ),
                 ) {
-                | ([name, version], Some(int)) => (name, version, int.repo, int.repoDev)
-                | _ => ("invalid-name", "invalid-version", "", "")
+                | ([name, version], Some(int)) =>
+                  pkgs->Array.concat([(name, version, int.repo, int.repoDev)])
+                | _ => pkgs
                 }
-              | _ => ("invalid-name", "invalid-version", "", "")
+              | _ => pkgs
               }
-            })
+            }, [])
             ->Array.flatMap(((name, version, repo, repoDev)) => {
               [
                 `conan download ${name}/${version}@ -r ${repoDev}`,
@@ -260,12 +266,9 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
                 },
               )
             }),
-          )
-          ->Some
-        },
-        image: Some(
-          "registry.gitlab.com/aivero/open-source/contrib/focal-x86_64:master",
+          ),
         ),
+        image: Some("registry.gitlab.com/aivero/open-source/contrib/focal-x86_64:master"),
         services: None,
         tags: Some(["x86_64", "aws"]),
         variables: None,
