@@ -108,7 +108,7 @@ let init = (ints: array<Instance.t>) => {
     ->Tuple.map4(Env.getError)
     ->Result.seq4
     ->Task.fromResult
-    ->Task.map(((user, passwd, repo, repo_dev)) =>
+    ->Task.flatMap(((user, passwd, repo, repo_dev)) =>
       Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])->Task.flatMap(_ =>
         Proc.run(["conan", "user", user, "-p", passwd, "-r", repo_dev])
       )
