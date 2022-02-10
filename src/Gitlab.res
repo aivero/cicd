@@ -9,61 +9,7 @@ let rec chunk = (array, size) => {
   }
 }
 
-let base = `.conan:
-  variables:
-    CONAN_USER_HOME: "$CI_PROJECT_DIR"
-    CONAN_DATA_PATH: "$CI_PROJECT_DIR/conan_data"
-    GIT_SUBMODULE_STRATEGY: recursive
-    CARGO_HOME: "$CI_PROJECT_DIR/.cargo"
-    SCCACHE_DIR: "$CI_PROJECT_DIR/.sccache"
-    GIT_CLEAN_FLAGS: -x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**
-  script:
-    - conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR
-    - conan config set general.default_profile=$PROFILE
-    - conan config set storage.path=$CONAN_DATA_PATH
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL
-    - conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC
-    - conan create -u $FOLDER $NAME/$VERSION@ $ARGS
-    - conan upload $NAME/$VERSION@ --all -c -r $REPO
-    - "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo"
-  retry:
-    max: 2
-    when:
-      - runner_system_failure
-      - stuck_or_timeout_failure
-  artifacts:
-    expire_in: 1 month
-    paths:
-      - "conan_data/$NAME/$VERSION/_/_/build/*/meson-logs/*-log.txt"
-      - "conan_data/$NAME/$VERSION/_/_/build/*/*/meson-logs/*-log.txt"
-      - "conan_data/$NAME/$VERSION/_/_/build/*/CMakeFiles/CMake*.log"
-      - "conan_data/$NAME/$VERSION/_/_/build/*/*/CMakeFiles/CMake*.log"
-      - "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log"
-    when: always
-  cache:
-    key: "$CI_RUNNER_EXECUTABLE_ARCH"
-    paths:
-      - "$CARGO_HOME"
-      - "$SCCACHE_DIR"
-.conan-x86_64:
-  extends: .conan
-  tags: [x86_64,aws]
-  image: registry.gitlab.com/aivero/open-source/contrib/focal-x86_64:master
-.conan-armv8:
-  extends: .conan
-  tags: [armv8,aws]
-  image: registry.gitlab.com/aivero/open-source/contrib/focal-armv8:master
-.conan-x86_64-bootstrap:
-  extends: .conan-x86_64
-  image: registry.gitlab.com/aivero/open-source/contrib/focal-x86_64-bootstrap:master
-.conan-armv8-bootstrap:
-  extends: .conan-armv8
-  image: registry.gitlab.com/aivero/open-source/contrib/focal-armv8-bootstrap:master
-`
-
-let generate = (jobs) => {
+let generate = jobs => {
   let encode = Encoder.new()->Encoder.encode
   let jobs =
     jobs->Array.empty
@@ -71,22 +17,17 @@ let generate = (jobs) => {
           (
             "empty",
             {
-              needs: [],
+              ...Jobt.default,
               script: Some(["echo"]),
-              image: None,
-              services: None,
               tags: Some(["x86_64"]),
-              extends: None,
-              variables: None,
-              cache: None,
             },
           ),
         ]
       : jobs
-  jobs->Dict.fromArray
+  jobs
+  ->Dict.fromArray
   ->Yaml.classify
   ->Yaml.stringify
-  ->(conf => base ++ conf)
   ->encode
   ->File.write("generated-config.yml")
 }

@@ -93,14 +93,12 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
     (
       `${name}/${version}`,
       {
+        ...Jobt.default,
         script: Some(script),
         image: Some("docker:19.03.12"),
         services: Some(["docker:19.03.12-dind"]),
         tags: Some(tags),
-        extends: None,
-        variables: None,
-        needs: needs,
-        cache: None,
+        needs: Some(needs),
       },
     )
   })

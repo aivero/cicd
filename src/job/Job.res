@@ -29,14 +29,10 @@ let handleDuplicates = jobs => {
           (
             key,
             {
+              ...Jobt.default,
               script: Some(["echo"]),
-              image: None,
-              services: None,
               tags: Some(["x86_64"]),
-              variables: None,
-              extends: None,
-              needs: jobs->Array.map(((key, _)) => key),
-              cache: None,
+              needs: Some(jobs->Array.map(((key, _)) => key)),
             },
           ),
         ])

@@ -1,12 +1,6 @@
 open Instance
 open! Jobt
 
-type commandInstance = {
-  base: Instance.t,
-  extends: array<string>,
-  hash: string,
-}
-
 let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
@@ -17,13 +11,10 @@ let getJobs = (ints: array<Instance.t>) => {
       ->Result.map(image => (
         `${name}/${version}`,
         {
+          ...Jobt.default,
           script: Some([`cd ${folder}`]->Array.concat(script)),
           image: Some(image),
-          tags: None,
-          variables: None,
-          extends: None,
-          services: None,
-          needs: needs->Array.uniq,
+          needs: Some(needs->Array.uniq),
           cache: cache,
         },
       ))

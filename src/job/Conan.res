@@ -16,6 +16,96 @@ type conanInfo = {
   reference: string,
 }
 
+let extends = [
+  (
+    ".conan",
+    {
+      ...Jobt.default,
+      variables: Some(
+        [
+          ("CONAN_USER_HOME", "$CI_PROJECT_DIR"),
+          ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
+          ("GIT_SUBMODULE_STRATEGY", "recursive"),
+          ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo"),
+          ("SCCACHE_DIR", "$CI_PROJECT_DIR/.sccache"),
+          ("GIT_CLEAN_FLAGS", "-x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**"),
+        ]->Dict.fromArray,
+      ),
+      script: Some([
+        "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
+        "conan config set general.default_profile=$PROFILE",
+        "conan config set storage.path=$CONAN_DATA_PATH",
+        "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL",
+        "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL",
+        "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
+        "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
+        "conan create -u $FOLDER $NAME/$VERSION@ $ARGS",
+        "conan upload $NAME/$VERSION@ --all -c -r $REPO",
+        "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
+      ]),
+      cache: Some({
+        key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
+        paths: ["$CARGO_HOME", "$SCCACHE_DIR"],
+      }),
+      retry: Some({
+        max: Some(2),
+        \"when": Some(["runner_system_failure", "stuck_or_timeout_failure"]),
+      }),
+      artifacts: Some({
+        expire_in: Some("1 month"),
+        \"when": Some("always"),
+        paths: Some([
+          "conan_data/$NAME/$VERSION/_/_/build/*/meson-logs/*-log.txt",
+          "conan_data/$NAME/$VERSION/_/_/build/*/*/meson-logs/*-log.txt",
+          "conan_data/$NAME/$VERSION/_/_/build/*/CMakeFiles/CMake*.log",
+          "conan_data/$NAME/$VERSION/_/_/build/*/*/CMakeFiles/CMake*.log",
+          "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log",
+        ]),
+      }),
+    },
+  ),
+  (
+    ".conan-x86_64",
+    {
+      ...Jobt.default,
+      extends: Some([".conan"]),
+      tags: "linux-x86_64"->Profile.getTags->Result.toOption,
+      image: "linux-x86_64"->Profile.getImage->Result.toOption,
+    },
+  ),
+  (
+    ".conan-armv8",
+    {
+      ...Jobt.default,
+      extends: Some([".conan"]),
+      tags: "linux-armv8"->Profile.getTags->Result.toOption,
+      image: "linux-armv8"->Profile.getImage->Result.toOption,
+    },
+  ),
+  (
+    ".conan-x86_64-bootstrap",
+    {
+      ...Jobt.default,
+      extends: Some([".conan-x86_64"]),
+      image: "linux-x86_64"
+      ->Profile.getImage
+      ->Result.toOption
+      ->Option.map(image => image ++ "-bootstrap"),
+    },
+  ),
+  (
+    ".conan-armv8-bootstrap",
+    {
+      ...Jobt.default,
+      extends: Some([".conan-armv8"]),
+      image: "linux-armv8"
+      ->Profile.getImage
+      ->Result.toOption
+      ->Option.map(image => image ++ "-bootstrap"),
+    },
+  ),
+]
+
 let hashLength = 3
 let hashN = Hash.hashN(_, hashLength)
 
@@ -123,7 +213,10 @@ let init = (ints: array<Instance.t>) => {
 }
 
 let getBuildOrder = (ints: array<conanInstance>) => {
-  let locks = ints->Array.map(({base: {name, version}} as int) => `${name}-${version}-${(int.base, int.profile)->hashN}.lock`)
+  let locks =
+    ints->Array.map(({base: {name, version}} as int) =>
+      `${name}-${version}-${(int.base, int.profile)->hashN}.lock`
+    )
   let bundle =
     locks->Array.empty
       ? ""->Task.to
@@ -174,31 +267,29 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
         ints->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}`
         )
-      ints->Array.map(({ base, extends } as int) => {
+      ints->Array.map(({base, extends} as int) => {
         (
           `${base.name}/${base.version}`,
           {
-            script: None,
-            image: None,
-            services: None,
-            tags: None,
+            ...Jobt.default,
             variables: Some(int->getVariables),
             extends: Some(extends),
-            needs: base.needs
-            ->Array.concat(
-              switch buildOrder[index - 1] {
-              | Some(group) =>
-                group->Array.map(pkg => {
-                  switch pkg->String.split("@#") {
-                  | [pkg, _] => pkg
-                  | _ => "invalid-pkg"
-                  }
-                })
-              | None => []
-              },
-            )
-            ->Array.uniq,
-            cache: None,
+            needs: Some(
+              base.needs
+              ->Array.concat(
+                switch buildOrder[index - 1] {
+                | Some(group) =>
+                  group->Array.map(pkg => {
+                    switch pkg->String.split("@#") {
+                    | [pkg, _] => pkg
+                    | _ => "invalid-pkg"
+                    }
+                  })
+                | None => []
+                },
+              )
+              ->Array.uniq,
+            ),
           },
         )
       })
@@ -208,6 +299,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
     (
       "conan-upload",
       {
+        ...Jobt.default,
         script: Some(
           [
             "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
@@ -252,21 +344,19 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           ),
         ),
         image: Profile.default->Profile.getImage->Result.toOption,
-        services: None,
         tags: Profile.default->Profile.getTags->Result.toOption,
-        variables: None,
-        extends: None,
         needs: switch buildOrder[buildOrder->Array.length - 1] {
         | Some(needs) =>
-          needs->Array.map(need =>
-            switch need->String.split("@#") {
-            | [need, _] => need
-            | _ => "invalid-need"
-            }
+          Some(
+            needs->Array.map(need =>
+              switch need->String.split("@#") {
+              | [need, _] => need
+              | _ => "invalid-need"
+              }
+            ),
           )
-        | None => []
+        | None => Some([])
         },
-        cache: None,
       },
     ),
   ])
@@ -344,6 +434,9 @@ let getJobs = (ints: array<Instance.t>) => {
   ->Task.flatMap(ints =>
     ints->Array.empty
       ? []->Task.to
-      : ints->getBuildOrder->Task.map(buildOrder => ints->getJob(buildOrder))
+      : ints
+        ->getBuildOrder
+        ->Task.map(buildOrder => ints->getJob(buildOrder))
+        ->Task.map(jobs => extends->Array.concat(jobs))
   )
 }
