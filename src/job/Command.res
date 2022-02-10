@@ -1,17 +1,24 @@
 open Instance
 open! Jobt
 
+type commandInstance = {
+  base: Instance.t,
+  extends: array<string>,
+  hash: string,
+}
+
 let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
-  ->Array.flatMap(({name, version, image, script, needs, profiles, folder, cache}) => {
-    profiles
-    ->Array.map(profile =>
-      Dict.to(
-        `${name}/${version}-${profile}`,
+  ->Array.flatMap(({ name, version, folder, script, needs, cache, profiles }) => {
+    profiles->Array.map(profile => {
+      profile
+      ->Profile.getImage
+      ->Result.map(image => (
+        `${name}/${version}`,
         {
           script: Some([`cd ${folder}`]->Array.concat(script)),
-          image: profile->Profile.getImage(image),
+          image: Some(image),
           tags: None,
           variables: None,
           extends: None,
@@ -19,23 +26,9 @@ let getJobs = (ints: array<Instance.t>) => {
           needs: needs->Array.uniq,
           cache: cache,
         },
-      )
-    )
-    ->Array.concat([
-      Dict.to(
-        `${name}/${version}`,
-        {
-          script: Some(["echo"]),
-          image: None,
-          tags: None,
-          variables: None,
-          extends: None,
-          services: None,
-          needs: profiles->Array.map(profile => `${name}/${version}-${profile}`),
-          cache: None,
-        },
-      ),
-    ])
+      ))
+    })
   })
-  ->Task.to
+  ->Result.seq
+  ->Task.fromResult
 }

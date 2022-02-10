@@ -4,7 +4,6 @@ open! Jobt
 type conanInstance = {
   base: Instance.t,
   extends: array<string>,
-  hash: string,
   revision: string,
   profile: string,
   repo: string,
@@ -124,7 +123,7 @@ let init = (ints: array<Instance.t>) => {
 }
 
 let getBuildOrder = (ints: array<conanInstance>) => {
-  let locks = ints->Array.map(({base: {name, version}, hash}) => `${name}-${version}-${hash}.lock`)
+  let locks = ints->Array.map(({base: {name, version}} as int) => `${name}-${version}-${(int.base, int.profile)->hashN}.lock`)
   let bundle =
     locks->Array.empty
       ? ""->Task.to
@@ -175,18 +174,17 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
         ints->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}`
         )
-      ints
-      ->Array.map(int => {
-        Dict.to(
-          `${int.base.name}/${int.base.version}@${int.hash}`,
+      ints->Array.map(({ base, extends } as int) => {
+        (
+          `${base.name}/${base.version}`,
           {
             script: None,
             image: None,
             services: None,
             tags: None,
             variables: Some(int->getVariables),
-            extends: Some(int.extends),
-            needs: int.base.needs
+            extends: Some(extends),
+            needs: base.needs
             ->Array.concat(
               switch buildOrder[index - 1] {
               | Some(group) =>
@@ -204,25 +202,10 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           },
         )
       })
-      ->Array.concat([
-        Dict.to(
-          pkg,
-          {
-            script: Some(["echo"]),
-            image: None,
-            services: None,
-            tags: Some(["x86_64"]),
-            variables: None,
-            extends: None,
-            needs: ints->Array.map(foundPkg => `${pkg}@${foundPkg.hash}`),
-            cache: None,
-          },
-        ),
-      ])
     })
   })
   ->Array.concat([
-    Dict.to(
+    (
       "conan-upload",
       {
         script: Some(
@@ -268,9 +251,9 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             }),
           ),
         ),
-        image: Some("registry.gitlab.com/aivero/open-source/contrib/focal-x86_64:master"),
+        image: Profile.default->Profile.getImage->Result.toOption,
         services: None,
-        tags: Some(["x86_64", "aws"]),
+        tags: Profile.default->Profile.getTags->Result.toOption,
         variables: None,
         extends: None,
         needs: switch buildOrder[buildOrder->Array.length - 1] {
@@ -278,7 +261,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
           needs->Array.map(need =>
             switch need->String.split("@#") {
             | [need, _] => need
-            | _ => "invalid_need"
+            | _ => "invalid-need"
             }
           )
         | None => []
@@ -301,16 +284,7 @@ let getConanInstances = (int: Instance.t) => {
     ->Result.seq2
     ->Task.fromResult
     ->Task.flatMap(((extends, (repo, repoDev))) => {
-      let hash = {
-        base: int,
-        repo: repo,
-        repoDev: repoDev,
-        args: args,
-        extends: extends,
-        profile: profile,
-        revision: "",
-        hash: "",
-      }->hashN
+      let hash = (int, profile)->hashN
       Proc.run(
         [
           "conan",
@@ -350,7 +324,6 @@ let getConanInstances = (int: Instance.t) => {
           extends: extends,
           args: args,
           profile: profile,
-          hash: hash,
         }->Task.to
       })
     })

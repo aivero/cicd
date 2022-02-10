@@ -1,25 +1,36 @@
 type t = {int: Instance.t, profile: string}
 
-let getImage = (profile, image) => {
-  let registry = Env.get("DOCKER_REGISTRY")
-  let prefix = Env.get("DOCKER_PREFIX")
+let default = "linux-x86_64"
+
+let getImage = (profile) => {
+  let (registry, prefix) = (Env.getError("DOCKER_REGISTRY"), Env.getError("DOCKER_PREFIX"))
 
   let triple = profile->String.split("-")->List.fromArray
   let os = switch triple {
-  | list{_, "musl", ..._} => Some("alpine")
-  | list{"linux", ..._} | list{"wasi", ..._} => Env.get("DOCKER_DISTRO")
-  | list{"windows", ..._} => Some("windows")
-  | list{"macos", ..._} => Some("macos")
-  | _ => None
+  | list{_, "musl", ..._} => Ok("alpine")
+  | list{"linux", ..._} | list{"wasi", ..._} => Env.getError("DOCKER_DISTRO")
+  | list{"windows", ..._} => Ok("windows")
+  | list{"macos", ..._} => Ok("macos")
+  | _ => Error(`profile: os in ${profile} not supported`)
   }
 
   let arch = switch triple {
-  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Some("x86_64")
-  | list{_, "armv8", ..._} => Some("armv8")
-  | _ => None
+  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok("x86_64")
+  | list{_, "armv8", ..._} => Ok("armv8")
+  | _ => Error(`profile: arch in ${profile} not supported`)
   }
-  switch image {
-  | Some(image) => Some(image)
-  | None => (registry, prefix, os, arch)->Option.seq4->Option.map(((registry, prefix, os, arch)) => `${registry}${prefix}${os}-${arch}`)
+
+  (registry, prefix, os, arch)->Result.seq4->Result.map(((registry, prefix, os, arch)) => `${registry}${prefix}${os}-${arch}`)
+}
+
+let getTags = (profile) => {
+  
+  let triple = profile->String.split("-")->List.fromArray
+  let arch = switch triple {
+  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok("x86_64")
+  | list{_, "armv8", ..._} => Ok("armv8")
+  | _ => Error(`profile: arch in ${profile} not supported`)
   }
+
+  arch->Result.map(arch => [arch, "aws"])
 }

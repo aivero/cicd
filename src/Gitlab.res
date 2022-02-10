@@ -68,7 +68,7 @@ let generate = (jobs) => {
   let jobs =
     jobs->Array.empty
       ? [
-          Dict.to(
+          (
             "empty",
             {
               needs: [],
@@ -83,9 +83,7 @@ let generate = (jobs) => {
           ),
         ]
       : jobs
-
-  jobs
-  ->Dict.flatten
+  jobs->Dict.fromArray
   ->Yaml.classify
   ->Yaml.stringify
   ->(conf => base ++ conf)

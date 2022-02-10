@@ -1,23 +1,52 @@
+open Jobt
+
 type mode = [
   | #conan
   | #docker
   | #command
-  | #"conan-install-tarball"
-  | #"conan-install-script"
 ]
 
 let parseMode = str => {
   switch str {
   | "conan" => #conan
   | "docker" => #docker
-  | "conan-install-tarball" => #"conan-install-tarball"
-  | "conan-install-script" => #"conan-install-script"
   | _ => #command
   }
+}
+
+let hashLength = 3
+let hashN = Hash.hashN(_, hashLength)
+
+let handleDuplicates = jobs => {
+  jobs
+  ->Array.groupBy(((key, _)) => key)
+  ->Array.flatMap(((key, group)) => {
+    switch group {
+    | [job] => [job]
+    | jobs => {
+        let jobs = jobs->Array.map(((key, job)) => (`${key}@${job->hashN}`, job))
+        jobs->Array.concat([
+          (
+            key,
+            {
+              script: Some(["echo"]),
+              image: None,
+              services: None,
+              tags: Some(["x86_64"]),
+              variables: None,
+              extends: None,
+              needs: jobs->Array.map(((key, _)) => key),
+              cache: None,
+            },
+          ),
+        ])
+      }
+    }
+  })
 }
 
 let load = ints => {
   Async.seq(
     [Command.getJobs, Conan.getJobs, Docker.getJobs]->Array.map(f => ints->f),
-  )->Async.map(jobs => jobs->Result.seq->Result.map(Array.flatten))
+  )->Async.map(jobs => jobs->Result.seq->Result.map(jobs => jobs->Array.flatten->handleDuplicates))
 }
