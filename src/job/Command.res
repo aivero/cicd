@@ -4,11 +4,13 @@ open! Jobt
 let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
-  ->Array.flatMap(({ name, version, folder, script, needs, cache, profiles }) => {
+  ->Array.flatMap(({name, image, version, folder, script, needs, cache, profiles}) => {
     profiles->Array.map(profile => {
-      profile
-      ->Profile.getImage
-      ->Result.map(image => (
+      let image = switch image {
+      | Some(image) => Ok(image)
+      | _ => profile->Profile.getImage
+      }
+      image->Result.map(image => (
         `${name}/${version}`,
         {
           ...Jobt.default,

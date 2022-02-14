@@ -11,6 +11,6 @@
     "rescript": "^9.1.4"
   },
   "dependencies": {
-    "@prefix_re/std": "^0.0.9"
+    "@prefix_re/std": "^0.0.10"
   }
 }
