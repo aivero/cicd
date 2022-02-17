@@ -7,6 +7,8 @@ type dockerInstance = {
   folder: string,
   tags: array<string>,
   needs: array<string>,
+  beforeScript: array<string>,
+  afterScript: array<string>,
 }
 
 let getName = (file, folder) => {
@@ -17,9 +19,9 @@ let getName = (file, folder) => {
   }
 }
 
-let getInstances = ({name, version, folder, tags, needs, modeInt}: Instance.t): array<
-  dockerInstance,
-> => {
+let getInstances = (
+  {name, version, folder, tags, needs, modeInt, beforeScript, afterScript}: Instance.t,
+): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
@@ -33,6 +35,8 @@ let getInstances = ({name, version, folder, tags, needs, modeInt}: Instance.t): 
         folder: folder,
         tags: tags,
         needs: needs,
+        beforeScript: beforeScript,
+        afterScript: afterScript,
       },
     ]
   | None =>
@@ -49,11 +53,15 @@ let getInstances = ({name, version, folder, tags, needs, modeInt}: Instance.t): 
       folder: folder,
       tags: ["gitlab-org-docker"],
       needs: needs,
+      beforeScript: beforeScript,
+      afterScript: afterScript,
     })
   }
 }
 
-let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
+let getJob = (
+  {name, version, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
+) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
@@ -94,7 +102,9 @@ let getJob = ({name, version, file, folder, tags, needs}: dockerInstance) => {
       `${name}/${version}`,
       {
         ...Jobt.default,
+        before_script: Some(beforeScript),
         script: Some(script),
+        after_script: Some(afterScript),
         image: Some("docker:19.03.12"),
         services: Some(["docker:19.03.12-dind"]),
         tags: Some(tags),
