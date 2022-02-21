@@ -78,7 +78,7 @@ let getJob = (
     let script =
       [
         `docker login --username ${username} --password ${password} ${registry}`,
-        `docker build ${folder} --file ${[folder, file]->Path.join} --tag ${dockerTag}:${version}`,
+        `docker build . --file ${file} --tag ${dockerTag}:${version}`,
         `docker push ${dockerTag}:${version}`,
       ]
       ->Array.concat(
@@ -103,7 +103,7 @@ let getJob = (
       {
         ...Jobt.default,
         before_script: Some([`cd ${folder}`]->Array.concat(beforeScript)),
-        script: Some(script),
+        script: Some([`cd ${folder}`]->Array.concat(script)),
         after_script: Some([`cd ${folder}`]->Array.concat(afterScript)),
         image: Some("docker:19.03.12"),
         services: Some(["docker:19.03.12-dind"]),
