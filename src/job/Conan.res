@@ -39,7 +39,7 @@ let extends = [
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
-        "conan create -u $FOLDER $NAME/$VERSION@ $ARGS",
+        "conan create -u . $NAME/$VERSION@ $ARGS",
         "conan upload $NAME/$VERSION@ --all -c -r $REPO",
         "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
       ]),
@@ -159,11 +159,10 @@ let getRepos = folder => {
   )
 }
 
-let getVariables = ({base: {name, version, folder}, profile, args, repoDev}: conanInstance) => {
+let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstance) => {
   [
     ("NAME", name),
     ("VERSION", version),
-    ("FOLDER", folder),
     ("REPO", repoDev),
     ("PROFILE", profile),
   ]
