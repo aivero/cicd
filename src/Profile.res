@@ -39,7 +39,7 @@ let getPlatform = (profile) => {
     | _ => Error(`profile: arch in ${profile} not supported`)
     }
 
-    (os, arch)->Result.seq2->Result.map(((os, arch)) => `${os}${arch}`)
+    (os, arch)->Result.seq2->Result.map(((os, arch)) => `${os}/${arch}`)
 }
 
 let getTags = (profile) => {
