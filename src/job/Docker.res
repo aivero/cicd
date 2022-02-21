@@ -3,6 +3,7 @@ open! Jobt
 type dockerInstance = {
   name: string,
   version: string,
+  profile: string,
   file: string,
   folder: string,
   tags: array<string>,
@@ -20,53 +21,57 @@ let getName = (file, folder) => {
 }
 
 let getInstances = (
-  {name, version, folder, tags, needs, modeInt, beforeScript, afterScript}: Instance.t,
+  {name, version, folder, profiles, tags, needs, modeInt, beforeScript, afterScript}: Instance.t,
 ): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
   | _ => None
   }
-  switch file {
-  | Some(file) => [
-      {
-        name: name,
+  profiles->Array.flatMap(profile =>
+    switch file {
+    | Some(file) => [
+        {
+          name: name,
+          version: version,
+          profile: profile,
+          file: file,
+          folder: folder,
+          tags: tags,
+          needs: needs,
+          beforeScript: beforeScript,
+          afterScript: afterScript,
+        },
+      ]
+    | None =>
+      Path.read(folder)
+      ->Array.filter(file => file.name->String.includes("Dockerfile"))
+      ->Array.map(file => {
+        name: switch (file.name->String.split("."))[0] {
+        | Some("Dockerfile") => name
+        | Some(name) => name
+        | _ => name
+        },
         version: version,
-        file: file,
+        profile: profile,
+        file: file.name,
         folder: folder,
-        tags: tags,
+        tags: ["gitlab-org-docker"],
         needs: needs,
         beforeScript: beforeScript,
         afterScript: afterScript,
-      },
-    ]
-  | None =>
-    Path.read(folder)
-    ->Array.filter(file => file.name->String.includes("Dockerfile"))
-    ->Array.map(file => {
-      name: switch (file.name->String.split("."))[0] {
-      | Some("Dockerfile") => name
-      | Some(name) => name
-      | _ => name
-      },
-      version: version,
-      file: file.name,
-      folder: folder,
-      tags: ["gitlab-org-docker"],
-      needs: needs,
-      beforeScript: beforeScript,
-      afterScript: afterScript,
-    })
-  }
+      })
+    }
+  )
 }
 
 let getJob = (
-  {name, version, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
+  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
 ) => {
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
   ->Result.seq4
-  ->Result.map(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${name}`
+  ->Result.flatMap(((username, password, registry, prefix)) => {
+    let dockerTag = `${registry}${prefix}/${profile}/${name}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => true
     | _ => false
@@ -75,42 +80,44 @@ let getJob = (
     | Some("master") => true
     | _ => false
     }
-    let script =
-      [
-        `docker login --username ${username} --password ${password} ${registry}`,
-        `docker build . --file ${file} --tag ${dockerTag}:${version}`,
-        `docker push ${dockerTag}:${version}`,
-      ]
-      ->Array.concat(
-        branchTagUpload
-          ? [
-              `docker tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
-              `docker push ${dockerTag}:$CI_COMMIT_REF_NAME`,
-            ]
-          : [],
-      )
-      ->Array.concat(
-        latestTagUpload
-          ? [
-              `docker tag ${dockerTag}:${version} ${dockerTag}:latest`,
-              `docker push ${dockerTag}:latest`,
-            ]
-          : [],
-      )
+    profile->Profile.getPlatform->Result.map(platform => {
+      let script =
+        [
+          `docker login --username ${username} --password ${password} ${registry}`,
+          `docker build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
+          `docker push ${dockerTag}:${version}`,
+        ]
+        ->Array.concat(
+          branchTagUpload
+            ? [
+                `docker tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `docker push ${dockerTag}:$CI_COMMIT_REF_NAME`,
+              ]
+            : [],
+        )
+        ->Array.concat(
+          latestTagUpload
+            ? [
+                `docker tag ${dockerTag}:${version} ${dockerTag}:latest`,
+                `docker push ${dockerTag}:latest`,
+              ]
+            : [],
+        )
 
-    (
-      `${name}/${version}`,
-      {
-        ...Jobt.default,
-        before_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(beforeScript)),
-        script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
-        after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
-        image: Some("docker:19.03.12"),
-        services: Some(["docker:19.03.12-dind"]),
-        tags: Some(tags),
-        needs: Some(needs),
-      },
-    )
+      (
+        `${name}/${version}`,
+        {
+          ...Jobt.default,
+          before_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(beforeScript)),
+          script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
+          after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
+          image: Some("docker:19.03.12"),
+          services: Some(["docker:19.03.12-dind"]),
+          tags: Some(tags),
+          needs: Some(needs),
+        },
+      )
+    })
   })
 }
 
