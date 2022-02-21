@@ -274,8 +274,8 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
             ...Jobt.default,
             variables: Some(int->getVariables),
             extends: Some(extends),
-            before_script: Some([`cd ${int.base.folder}`]->Array.concat(int.base.beforeScript)),
-            after_script: Some([`cd ${int.base.folder}`]->Array.concat(int.base.afterScript)),
+            before_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript)),
+            after_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript)),
             needs: Some(
               base.needs
               ->Array.concat(
