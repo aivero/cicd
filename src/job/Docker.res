@@ -71,7 +71,7 @@ let getJob = (
   ->Tuple.map4(Env.getError)
   ->Result.seq4
   ->Result.flatMap(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${profile}/${name}`
+    let dockerTag = `${registry}${prefix}${name}/${profile}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => true
     | _ => false
