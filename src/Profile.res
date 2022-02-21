@@ -2,8 +2,9 @@ type t = {int: Instance.t, profile: string}
 
 let default = "linux-x86_64"
 
-let getImage = (profile) => {
-  let (registry, prefix) = (Env.getError("DOCKER_REGISTRY"), Env.getError("DOCKER_PREFIX"))
+let getImage = (profile, registry: option<string>, prefix) => {
+  let registry = registry->Option.flatFold(() => Env.get("DOCKER_REGISTRY"))->Option.toResult("DOCKER_REGISTRY not defined")
+  let prefix = prefix->Option.flatFold(() => Env.get("DOCKER_PREFIX"))->Option.toResult("DOCKER_PREFIX not defined")
 
   let triple = profile->String.split("-")->List.fromArray
   let os = switch triple {

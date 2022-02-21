@@ -8,7 +8,7 @@ let getJobs = (ints: array<Instance.t>) => {
     profiles->Array.map(profile => {
       let image = switch image {
       | Some(image) => Ok(image)
-      | _ => profile->Profile.getImage
+      | _ => profile->Profile.getImage(None, None)
       }
       image->Result.map(image => (
         `${name}/${version}`,

@@ -9,7 +9,7 @@ let findAllInts = recursive => {
     ->String.split("\n")
     ->Array.map(Config.loadFile)
     ->Result.seq
-    ->Result.map(Array.flatten)
+    ->Result.map(Array.flat)
     ->Task.fromResult
   )
 }

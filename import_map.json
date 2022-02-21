@@ -6,7 +6,7 @@
     "js/": "./js/",
     "wrap": "./js/wrap.js",
     "rescript/": "https://github.com/prefix-re/runtime/raw/9.1/",
-    "@prefix_re/std/": "https://github.com/prefix-re/std/raw/v0.0.10/", 
+    "@prefix_re/std/": "https://github.com/prefix-re/std/raw/v0.0.12/", 
     "std/": "https://deno.land/std@0.96.0/",
     "yaml": "https://deno.land/std@0.96.0/encoding/yaml.ts",
     "path": "https://deno.land/std@0.96.0/path/mod.ts",

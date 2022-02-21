@@ -127,7 +127,7 @@ let findInts = () => {
     ->Array.flatMap(handleChange)
     ->Task.seq
     ->Task.map(confs => {
-      let ints = confs->Array.flatten
+      let ints = confs->Array.flat
       let (_, ints) = ints->Array.reduce(((intsHash, ints), int) => {
         let newHash = int->Hash.hash
         intsHash->Array.some(oldHash => oldHash == newHash)

@@ -44,5 +44,5 @@ let handleDuplicates = jobs => {
 let load = ints => {
   Async.seq(
     [Command.getJobs, Conan.getJobs, Docker.getJobs]->Array.map(f => ints->f),
-  )->Async.map(jobs => jobs->Result.seq->Result.map(jobs => jobs->Array.flatten->handleDuplicates))
+  )->Async.map(jobs => jobs->Result.seq->Result.map(jobs => jobs->Array.flat->handleDuplicates))
 }
