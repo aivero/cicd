@@ -102,9 +102,9 @@ let getJob = (
       `${name}/${version}`,
       {
         ...Jobt.default,
-        before_script: Some(beforeScript),
+        before_script: Some([`cd ${folder}`]->Array.concat(beforeScript)),
         script: Some(script),
-        after_script: Some(afterScript),
+        after_script: Some([`cd ${folder}`]->Array.concat(afterScript)),
         image: Some("docker:19.03.12"),
         services: Some(["docker:19.03.12-dind"]),
         tags: Some(tags),

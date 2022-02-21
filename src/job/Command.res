@@ -4,7 +4,7 @@ open! Jobt
 let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
-  ->Array.flatMap(({name, image, version, folder, script, needs, cache, profiles}) => {
+  ->Array.flatMap(({name, image, version, folder, beforeScript, script, afterScript, needs, cache, profiles}) => {
     profiles->Array.map(profile =>
       switch image {
       | Some(image) => Ok(image)
@@ -14,7 +14,9 @@ let getJobs = (ints: array<Instance.t>) => {
         `${name}/${version}`,
         {
           ...Jobt.default,
+          before_script: Some([`cd ${folder}`]->Array.concat(beforeScript)),
           script: Some([`cd ${folder}`]->Array.concat(script)),
+          after_script: Some([`cd ${folder}`]->Array.concat(afterScript)),
           image: Some(image),
           needs: Some(needs->Array.uniq),
           cache: cache,
