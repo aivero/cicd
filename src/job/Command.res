@@ -5,12 +5,12 @@ let getJobs = (ints: array<Instance.t>) => {
   ints
   ->Array.filter(int => int.mode == #command)
   ->Array.flatMap(({name, image, version, folder, script, needs, cache, profiles}) => {
-    profiles->Array.map(profile => {
-      let image = switch image {
+    profiles->Array.map(profile =>
+      switch image {
       | Some(image) => Ok(image)
-      | _ => profile->Profile.getImage(None, None)
-      }
-      image->Result.map(image => (
+      | _ =>
+        profile->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+      }->Result.map(image => (
         `${name}/${version}`,
         {
           ...Jobt.default,
@@ -20,7 +20,7 @@ let getJobs = (ints: array<Instance.t>) => {
           cache: cache,
         },
       ))
-    })
+    )
   })
   ->Result.seq
   ->Task.fromResult
