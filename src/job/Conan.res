@@ -254,7 +254,7 @@ let getExtends = ((profile, bootstrap)) => {
   arch->Result.map(arch => [`${base}-${arch}${end}`])
 }
 
-let getJob = (ints: array<conanInstance>, buildOrder) => {
+let getJob = (allInts: array<conanInstance>, buildOrder) => {
   buildOrder
   ->Array.flatMapWithIndex((index, group) => {
     group->Array.flatMap(pkg => {
@@ -263,7 +263,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
       | _ => ("invalid-pkg", "invalid-rev")
       }
       let ints =
-        ints->Array.filter(({base: {name, version}, revision}) =>
+        allInts->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}`
         )
       ints->Array.map(({base, extends} as int) => {
@@ -280,10 +280,10 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
               ->Array.concat(
                 switch buildOrder[index - 1] {
                 | Some(group) =>
-                  group->Array.map(pkg => {
+                  group->Array.flatMap(pkg => {
                     switch pkg->String.split("@#") {
-                    | [pkg, _] => pkg
-                    | _ => "invalid-pkg"
+                    | [pkg, _] => allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg) ? [pkg] : []
+                    | _ => []
                     }
                   })
                 | None => []
@@ -317,7 +317,7 @@ let getJob = (ints: array<conanInstance>, buildOrder) => {
               | [pkg, _] =>
                 switch (
                   pkg->String.split("/"),
-                  ints->Array.find(({base: {name, version}}) =>
+                  allInts->Array.find(({base: {name, version}}) =>
                     pkg->String.startsWith(`${name}/${version}`)
                   ),
                 ) {
