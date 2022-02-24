@@ -63,6 +63,14 @@ let load = () => {
   }
 
   let allInts = recursive->findAllInts
+  let allInts = allInts->Task.map(ints => {
+    ints->Array.empty
+      ? {
+          "No instances found"->Console.log
+          []
+        }
+      : { "All instances:"->Console.log; ints->Array.map(int => int.name)->Array.join(", ")->Console.log; ints}
+  })
 
   let ints = switch (kind, component) {
   | (Some("manual"), _) => allInts->Manual.findInts
@@ -75,11 +83,11 @@ let load = () => {
   let ints = ints->Task.map(ints => {
     ints->Array.empty
       ? {
-          "No instances found"->Console.log
+          "Instances selected"->Console.log
           []
         }
       : ints->Array.map(int => {
-          `Found instance: ${int.name}`->Console.log
+          `Instance selected: ${int.name}`->Console.log
           int
         })
   })
