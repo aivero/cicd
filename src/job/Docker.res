@@ -92,23 +92,23 @@ let getJob = (
     ->Result.map(platform => {
       let script =
         [
-          `docker login --username ${username} --password ${password} ${registry}`,
-          `docker build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
-          `docker push ${dockerTag}:${version}`,
+          `podman login --username ${username} --password ${password} ${registry}`,
+          `podman build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
+          `podman push ${dockerTag}:${version}`,
         ]
         ->Array.concat(
           branchTagUpload
             ? [
-                `docker tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
-                `docker push ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `podman tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `podman push ${dockerTag}:$CI_COMMIT_REF_NAME`,
               ]
             : [],
         )
         ->Array.concat(
           latestTagUpload
             ? [
-                `docker tag ${dockerTag}:${version} ${dockerTag}:latest`,
-                `docker push ${dockerTag}:latest`,
+                `podman tag ${dockerTag}:${version} ${dockerTag}:latest`,
+                `podman push ${dockerTag}:latest`,
               ]
             : [],
         )
@@ -120,8 +120,7 @@ let getJob = (
           before_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(beforeScript)),
           script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
           after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
-          image: Some("docker:20"),
-          services: Some(["docker:20-dind"]),
+          image: Some("quay.io/containers/podman:latest"),
           tags: tags,
           needs: Some(needs),
         },
