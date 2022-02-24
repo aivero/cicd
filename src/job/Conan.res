@@ -266,7 +266,8 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
         allInts->Array.filter(({base: {name, version}, revision}) =>
           pkgRevision == revision && pkg == `${name}/${version}`
         )
-      ints->Array.map(({base, extends} as int) => {
+      ints->Array.map(({base, profile, extends} as int) => {
+        `Found conan instance: ${base.name}/${base.version} (${profile})`->Console.log
         (
           `${base.name}/${base.version}`,
           {

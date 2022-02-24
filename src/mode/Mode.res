@@ -69,8 +69,20 @@ let load = () => {
   | (Some("git"), _) => Git.findInts()
   | (Some(mode), _) => `Mode not supported: ${mode}`->Task.toError
   | (None, Some(_)) => allInts->Manual.findInts
-  | (None,_) => Git.findInts()
+  | (None, _) => Git.findInts()
   }
+
+  let ints = ints->Task.map(ints => {
+    ints->Array.empty
+      ? {
+          "No instances found"->Console.log
+          []
+        }
+      : ints->Array.map(int => {
+          `Found instance: ${int.name}`->Console.log
+          int
+        })
+  })
 
   let ints = ints->addReqs(allInts)
 

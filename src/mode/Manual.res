@@ -21,6 +21,7 @@ let filter = (ints: array<Instance.t>, comps) => {
   })
 }
 
+
 let findInts = allInts => {
   Console.log("Manual Mode: Create instances from manual args")
   let comps = switch Env.get("component") {
