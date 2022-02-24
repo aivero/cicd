@@ -81,11 +81,11 @@ let getJob = (
     | _ => false
     }
     let tags = switch tags->Array.empty {
-    | true => {
+    | false => {
         Console.log("Docker Mode: Tags are set, overriding profile-generated tags")
         Some(tags)
       }
-    | false => profile->Profile.getTags->Result.toOption
+    | true => profile->Profile.getTags->Result.toOption
     }
     profile
     ->Profile.getPlatform
