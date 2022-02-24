@@ -80,7 +80,16 @@ let getJob = (
     | Some("master") => true
     | _ => false
     }
-    profile->Profile.getPlatform->Result.map(platform => {
+    let tags = switch tags->Array.empty {
+    | true => {
+        Console.log("Docker Mode: Tags are set, overriding profile-generated tags")
+        Some(tags)
+      }
+    | false => profile->Profile.getTags->Result.toOption
+    }
+    profile
+    ->Profile.getPlatform
+    ->Result.map(platform => {
       let script =
         [
           `docker login --username ${username} --password ${password} ${registry}`,
@@ -113,7 +122,7 @@ let getJob = (
           after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
           image: Some("docker:19.03.12"),
           services: Some(["docker:19.03.12-dind"]),
-          tags: Some(tags),
+          tags: tags,
           needs: Some(needs),
         },
       )
