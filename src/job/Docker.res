@@ -1,4 +1,5 @@
 open! Jobt
+open! Webapi.Base64
 
 type dockerInstance = {
   name: string,
@@ -65,7 +66,8 @@ let getInstances = (
 }
 
 let getJob = (
-  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance) => {
+  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
+) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
@@ -73,12 +75,12 @@ let getJob = (
   ->Result.flatMap(((username, password, registry, prefix)) => {
     let dockerTag = `${registry}${prefix}${name}/${profile}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
-    | Some(_) => true
-    | _ => false
+    | Some(_) => ` --destination ${dockerTag}:$CI_COMMIT_REF_NAME`
+    | _ => ``
     }
     let latestTagUpload = switch Env.get("CI_COMMIT_REF_NAME") {
-    | Some("master") => true
-    | _ => false
+    | Some("master") => " --destination ${dockerTag}:latest"
+    | _ => ``
     }
     let tags = switch tags->Array.empty {
     | false => {
@@ -87,31 +89,16 @@ let getJob = (
       }
     | true => profile->Profile.getTags->Result.toOption
     }
+    let b64Creds = String.trim(btoa(`${username}:${password}`))
     profile
     ->Profile.getPlatform
     ->Result.map(platform => {
-      let script =
-        [
-          `podman login --username ${username} --password ${password} ${registry}`,
-          `podman build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
-          `podman push ${dockerTag}:${version}`,
-        ]
-        ->Array.concat(
-          branchTagUpload
-            ? [
-                `podman tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
-                `podman push ${dockerTag}:$CI_COMMIT_REF_NAME`,
-              ]
-            : [],
-        )
-        ->Array.concat(
-          latestTagUpload
-            ? [
-                `podman tag ${dockerTag}:${version} ${dockerTag}:latest`,
-                `podman push ${dockerTag}:latest`,
-              ]
-            : [],
-        )
+      let script = [
+        `mkdir -p /kaniko/.docker`,
+        `echo \\\"{\\\"auths\\\":{\\\"${registry}\\\":{\\\"auth\\\":\\\"${b64Creds}\\\"}}}\\\" > /kaniko/.docker/config.json`,
+        `cat /kaniko/.docker/config.json`,
+        `/kaniko/executor --context \\\".\\\" --dockerfile \\\"${file}\\\" --customPlatform ${platform} --destination \\\"${dockerTag}:${version}\\\" ${branchTagUpload} ${latestTagUpload} `,
+      ]
 
       (
         `${name}/${version}`,
@@ -120,7 +107,7 @@ let getJob = (
           before_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(beforeScript)),
           script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
           after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
-          image: Some("quay.io/containers/podman:latest"),
+          image: Some({name: "gcr.io/kaniko-project/executor:debug", entrypoint: Some([""])}),
           tags: tags,
           needs: Some(needs),
         },

@@ -1,23 +1,28 @@
 type cache = {
   key: option<string>,
-  paths: array<string>
+  paths: array<string>,
+}
+
+type image = {
+  name: string,
+  entrypoint: option<array<string>>,
 }
 
 type retry = {
   max: option<int>,
-  \"when": option<array<string>>
+  \"when": option<array<string>>,
 }
 
 type artifacts = {
   expire_in: option<string>,
   paths: option<array<string>>,
-  \"when": option<string>
+  \"when": option<string>,
 }
 
 type t = {
   extends: option<array<string>>,
   variables: option<Dict.t<string>>,
-  image: option<string>,
+  image: option<image>,
   tags: option<array<string>>,
   before_script: option<array<string>>,
   script: option<array<string>>,
@@ -26,7 +31,7 @@ type t = {
   services: option<array<string>>,
   cache: option<cache>,
   retry: option<retry>,
-  artifacts: option<artifacts>
+  artifacts: option<artifacts>,
 }
 
 let default = {
@@ -36,9 +41,9 @@ let default = {
   needs: None,
   services: None,
   variables: None,
-  before_script:  None,
+  before_script: None,
   script: None,
-  after_script:  None,
+  after_script: None,
   cache: None,
   retry: None,
   artifacts: None,

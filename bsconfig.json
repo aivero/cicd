@@ -6,8 +6,11 @@
     "subdirs": true
   },
   "package-specs": "es6",
-  "bs-dependencies": ["@prefix_re/std"],
+  "bs-dependencies": [
+    "@prefix_re/std",
+    "rescript-webapi"
+  ],
   "bsc-flags": [
     "-open Std"
-   ]
+  ]
 }

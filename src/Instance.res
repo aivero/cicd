@@ -31,7 +31,7 @@ type t = {
   beforeScript: array<string>,
   script: array<string>,
   afterScript: array<string>,
-  image: option<string>,
+  image: option<image>,
   tags: array<string>,
   cache: option<Jobt.cache>,
 }
@@ -51,7 +51,6 @@ let modeToString = mode => {
   | #command => "command"
   }
 }
-
 
 let create = (int: Yaml.t, folderPath): t => {
   let name = switch int->Yaml.get("name") {
@@ -114,9 +113,21 @@ let create = (int: Yaml.t, folderPath): t => {
   | _ => false
   }
   let image = switch int->Yaml.get("image") {
-  | Yaml.String(image) => Some(image)
+  | Yaml.String(imageName) => Some({name: imageName, entrypoint: None})
+  | Yaml.Object(imageObject) =>
+    switch (imageObject->Dict.get("name"), imageObject->Dict.get("entry")) {
+    | (Some(Yaml.String(imageName)), Some(Yaml.String(entry))) =>
+      Some({
+        name: imageName,
+        entrypoint: Some([entry]),
+      })
+    | (Some(Yaml.String(imageName)), None) => Some({name: imageName, entrypoint: None})
+    | _ => None
+    }
   | _ => None
   }
+
+  //
   let tags = switch int->Yaml.get("tags") {
   | Yaml.Array(tags) => tags->Array.reduce((tags, tag) =>
       switch tag {
@@ -174,7 +185,7 @@ let create = (int: Yaml.t, folderPath): t => {
         | _ => []
         }
       , [])
-      Some({ key: Some(key), paths, })
+      Some({key: Some(key), paths: paths})
     }
   | (_, Yaml.Array(paths)) => {
       let paths = paths->Array.reduce((paths, path) =>
@@ -183,7 +194,7 @@ let create = (int: Yaml.t, folderPath): t => {
         | _ => []
         }
       , [])
-      Some({ key: None, paths, })
+      Some({key: None, paths: paths})
     }
   | _ => None
   }

@@ -70,7 +70,9 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan"]),
       tags: "linux-x86_64"->Profile.getTags->Result.toOption,
-      image: "linux-x86_64"->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+      image: "linux-x86_64"
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"), None)
+      ->Result.toOption,
     },
   ),
   (
@@ -79,7 +81,9 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan"]),
       tags: "linux-armv8"->Profile.getTags->Result.toOption,
-      image: "linux-armv8"->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+      image: "linux-armv8"
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"), None)
+      ->Result.toOption,
     },
   ),
   (
@@ -88,9 +92,12 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan-x86_64"]),
       image: "linux-x86_64"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"), None)
       ->Result.toOption
-      ->Option.map(image => image ++ "-bootstrap"),
+      ->Option.map(image => {
+        let name = image.name ++ "-bootstrap"
+        {name: name, entrypoint: image.entrypoint}
+      }),
     },
   ),
   (
@@ -99,9 +106,12 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan-armv8"]),
       image: "linux-armv8"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"), None)
       ->Result.toOption
-      ->Option.map(image => image ++ "-bootstrap"),
+      ->Option.map(image => {
+        let name = image.name ++ "-bootstrap"
+        {name: name, entrypoint: image.entrypoint}
+      }),
     },
   ),
 ]
@@ -160,12 +170,7 @@ let getRepos = folder => {
 }
 
 let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstance) => {
-  [
-    ("NAME", name),
-    ("VERSION", version),
-    ("REPO", repoDev),
-    ("PROFILE", profile),
-  ]
+  [("NAME", name), ("VERSION", version), ("REPO", repoDev), ("PROFILE", profile)]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
     switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
@@ -274,8 +279,12 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             ...Jobt.default,
             variables: Some(int->getVariables),
             extends: Some(extends),
-            before_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript)),
-            after_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript)),
+            before_script: Some(
+              [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript),
+            ),
+            after_script: Some(
+              [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
+            ),
             needs: Some(
               base.needs
               ->Array.concat(
@@ -283,7 +292,10 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
                 | Some(group) =>
                   group->Array.flatMap(pkg => {
                     switch pkg->String.split("@#") {
-                    | [pkg, _] => allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg) ? [pkg] : []
+                    | [pkg, _] =>
+                      allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
+                        ? [pkg]
+                        : []
                     | _ => []
                     }
                   })
@@ -345,7 +357,9 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             }),
           ),
         ),
-        image: Profile.default->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+        image: Profile.default
+        ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"), None)
+        ->Result.toOption,
         tags: Profile.default->Profile.getTags->Result.toOption,
         needs: switch buildOrder[buildOrder->Array.length - 1] {
         | Some(needs) =>
@@ -428,10 +442,7 @@ let getJobs = (ints: array<Instance.t>) => {
   ints
   ->init
   ->Task.flatMap(_ =>
-    ints
-    ->Array.map((int, ()) => int->getConanInstances)
-    ->Task.pool(Sys.cpus)
-    ->Task.map(Array.flat)
+    ints->Array.map((int, ()) => int->getConanInstances)->Task.pool(Sys.cpus)->Task.map(Array.flat)
   )
   ->Task.flatMap(ints =>
     ints->Array.empty

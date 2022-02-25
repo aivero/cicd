@@ -25,6 +25,7 @@ let getJobs = (ints: array<Instance.t>) => {
           profile->Profile.getImage(
             Env.get("CONAN_DOCKER_REGISTRY"),
             Env.get("CONAN_DOCKER_PREFIX"),
+            None,
           )
         }
       }->Result.map(image => (
