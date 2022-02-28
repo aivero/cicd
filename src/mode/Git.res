@@ -24,6 +24,7 @@ let getMergeBase = (curBranch, branch) => {
 }
 
 let getParentBranch = () => {
+  "Finding parent branch"->Console.log
   let curBranch = getCurBranch()->Task.fromResult
   (curBranch, Proc.run(["git", "branch", "-a"]))
   ->Task.seq2
@@ -36,6 +37,7 @@ let getParentBranch = () => {
       ->Array.filter(branch =>
         !(branch->String.startsWith("*") || branch->String.endsWith(`/${curBranch}`))
       )
+    `Branches: ${branches->Array.join(", ")}`->Console.log
     branches
     ->Array.map(getMergeBase(curBranch))
     ->Task.seq
