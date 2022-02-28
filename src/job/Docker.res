@@ -79,7 +79,7 @@ let getJob = (
     | _ => ``
     }
     let latestTagUpload = switch Env.get("CI_COMMIT_REF_NAME") {
-    | Some("master") => " --destination ${dockerTag}:latest"
+    | Some("master") => ` --destination ${dockerTag}:latest `
     | _ => ``
     }
     let tags = switch tags->Array.empty {
