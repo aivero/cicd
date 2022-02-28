@@ -65,7 +65,8 @@ let getInstances = (
 }
 
 let getJob = (
-  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance) => {
+  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
+) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
@@ -112,7 +113,6 @@ let getJob = (
               ]
             : [],
         )
-
       (
         `${name}/${version}`,
         {
@@ -124,6 +124,7 @@ let getJob = (
           services: Some(["docker:20-dind"]),
           tags: tags,
           needs: Some(needs),
+          variables: Some(Dict.fromArray([("DOCKER_TLS_CERTDIR", "/certs")])),
         },
       )
     })
