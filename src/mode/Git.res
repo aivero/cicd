@@ -3,6 +3,7 @@ let getCurBranch = () => {
 }
 
 let getMergeBase = (curBranch, branch) => {
+  `Comparing merge branch: ${branch}`->Console.log
   Proc.run(["git", "merge-base", curBranch, branch])
   ->Task.map(String.trim)
   ->Task.flatMap(mergeBase =>
