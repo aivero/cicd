@@ -95,7 +95,7 @@ let getJob = (
     ->Result.map(platform => {
       let script = [
         `mkdir -p /kaniko/.docker`,
-        `echo \\\"{\\\"auths\\\":{\\\"${registry}\\\":{\\\"auth\\\":\\\"${b64Creds}\\\"}}}\\\" > /kaniko/.docker/config.json`,
+        `echo \\\'{\\\"auths\\\":{\\\"${registry}\\\":{\\\"auth\\\":\\\"${b64Creds}\\\"}}}\\\' > /kaniko/.docker/config.json`,
         `cat /kaniko/.docker/config.json`,
         `/kaniko/executor --context \\\".\\\" --dockerfile \\\"${file}\\\" --customPlatform ${platform} --destination \\\"${dockerTag}:${version}\\\" ${branchTagUpload} ${latestTagUpload} `,
       ]
