@@ -9,6 +9,7 @@ type dockerInstance = {
   tags: array<string>,
   needs: array<string>,
   beforeScript: array<string>,
+  script: array<string>,
   afterScript: array<string>,
 }
 
@@ -21,7 +22,18 @@ let getName = (file, folder) => {
 }
 
 let getInstances = (
-  {name, version, folder, profiles, tags, needs, modeInt, beforeScript, afterScript}: Instance.t,
+  {
+    name,
+    version,
+    folder,
+    profiles,
+    tags,
+    needs,
+    modeInt,
+    beforeScript,
+    script,
+    afterScript,
+  }: Instance.t,
 ): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
   | Yaml.String(file) => Some(file)
@@ -39,6 +51,7 @@ let getInstances = (
           tags: tags,
           needs: needs,
           beforeScript: beforeScript,
+          script: script,
           afterScript: afterScript,
         },
       ]
@@ -58,6 +71,7 @@ let getInstances = (
         tags: ["gitlab-org-docker"],
         needs: needs,
         beforeScript: beforeScript,
+        script: script,
         afterScript: afterScript,
       })
     }
@@ -65,8 +79,7 @@ let getInstances = (
 }
 
 let getJob = (
-  {name, version, profile, file, folder, tags, needs, beforeScript, afterScript}: dockerInstance,
-) => {
+  {name, version, profile, file, folder, tags, needs, beforeScript, script, afterScript}: dockerInstance) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
@@ -91,7 +104,8 @@ let getJob = (
     profile
     ->Profile.getPlatform
     ->Result.map(platform => {
-      let script =
+      let script = switch script->Array.empty {
+      | true =>
         [
           `docker login --username ${username} --password ${password} ${registry}`,
           `docker build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
@@ -113,6 +127,8 @@ let getJob = (
               ]
             : [],
         )
+      | false => script
+      }
       (
         `${name}/${version}`,
         {
