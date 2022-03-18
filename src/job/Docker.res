@@ -8,6 +8,7 @@ type dockerInstance = {
   folder: string,
   tags: array<string>,
   needs: array<string>,
+  image: option<string>,
   beforeScript: array<string>,
   script: array<string>,
   afterScript: array<string>,
@@ -29,6 +30,7 @@ let getInstances = (
     profiles,
     tags,
     needs,
+    image,
     modeInt,
     beforeScript,
     script,
@@ -50,6 +52,7 @@ let getInstances = (
           folder: folder,
           tags: tags,
           needs: needs,
+          image: image,
           beforeScript: beforeScript,
           script: script,
           afterScript: afterScript,
@@ -70,6 +73,7 @@ let getInstances = (
         folder: folder,
         tags: ["gitlab-org-docker"],
         needs: needs,
+        image: image,
         beforeScript: beforeScript,
         script: script,
         afterScript: afterScript,
@@ -79,7 +83,20 @@ let getInstances = (
 }
 
 let getJob = (
-  {name, version, profile, file, folder, tags, needs, beforeScript, script, afterScript}: dockerInstance) => {
+  {
+    name,
+    version,
+    profile,
+    file,
+    folder,
+    tags,
+    needs,
+    image,
+    beforeScript,
+    script,
+    afterScript,
+  }: dockerInstance,
+) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
   ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
   ->Tuple.map4(Env.getError)
@@ -93,6 +110,16 @@ let getJob = (
     let latestTagUpload = switch Env.get("CI_COMMIT_REF_NAME") {
     | Some("master") => true
     | _ => false
+    }
+    let image = switch image {
+    | Some(image) => {
+        Console.log("Docker Mode: Image is set, using it as docker image")
+        Some(image)
+      }
+    | _ => {
+        Console.log("Docker Mode: Image is not set, using default docker:20")
+        Some("docker:20")
+      }
     }
     let tags = switch tags->Array.empty {
     | false => {
@@ -136,7 +163,7 @@ let getJob = (
           before_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(beforeScript)),
           script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
           after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
-          image: Some("docker:20"),
+          image: image,
           services: Some(["docker:20-dind"]),
           tags: tags,
           needs: Some(needs),
