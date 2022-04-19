@@ -141,11 +141,13 @@ let getJob = (
       }
     | true => profile->Profile.getTags->Result.toOption
     }
-    let params = switch params {
-    | Some(pa) => pa
-    | _ => []
+    let docker_params = switch params {
+    | Some(pa) => pa->Array.join(" ")
+    | _ => {
+        Console.log("Docker Mode: params are NOT set")
+        ""
+      }
     }
-    let docker_params = params->Array.join(" ")
     profile
     ->Profile.getPlatform
     ->Result.map(platform => {
