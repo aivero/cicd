@@ -52,7 +52,6 @@ let modeToString = mode => {
   }
 }
 
-
 let create = (int: Yaml.t, folderPath): t => {
   let name = switch int->Yaml.get("name") {
   | Yaml.String(name) => name
@@ -174,7 +173,7 @@ let create = (int: Yaml.t, folderPath): t => {
         | _ => []
         }
       , [])
-      Some({ key: Some(key), paths, })
+      Some({key: Some(key), paths: paths})
     }
   | (_, Yaml.Array(paths)) => {
       let paths = paths->Array.reduce((paths, path) =>
@@ -183,7 +182,7 @@ let create = (int: Yaml.t, folderPath): t => {
         | _ => []
         }
       , [])
-      Some({ key: None, paths, })
+      Some({key: None, paths: paths})
     }
   | _ => None
   }
