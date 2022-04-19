@@ -9,6 +9,7 @@ type dockerInstance = {
   tags: array<string>,
   needs: array<string>,
   image: option<string>,
+  params: option<array<string>>,
   beforeScript: array<string>,
   script: array<string>,
   afterScript: array<string>,
@@ -41,6 +42,15 @@ let getInstances = (
   | Yaml.String(file) => Some(file)
   | _ => None
   }
+  let params = switch modeInt->Yaml.get("params") {
+  | Yaml.Array(params) => Some(params->Array.reduce((params, p) =>
+        switch p {
+        | Yaml.String(p) => params->Array.concat([p])
+        | _ => params
+        }
+      , []))
+  | _ => None
+  }
   profiles->Array.flatMap(profile =>
     switch file {
     | Some(file) => [
@@ -53,6 +63,7 @@ let getInstances = (
           tags: tags,
           needs: needs,
           image: image,
+          params: params,
           beforeScript: beforeScript,
           script: script,
           afterScript: afterScript,
@@ -74,6 +85,7 @@ let getInstances = (
         tags: ["gitlab-org-docker"],
         needs: needs,
         image: image,
+        params: params,
         beforeScript: beforeScript,
         script: script,
         afterScript: afterScript,
@@ -92,6 +104,7 @@ let getJob = (
     tags,
     needs,
     image,
+    params,
     beforeScript,
     script,
     afterScript,
@@ -128,6 +141,11 @@ let getJob = (
       }
     | true => profile->Profile.getTags->Result.toOption
     }
+    let params = switch params {
+    | Some(pa) => pa
+    | _ => []
+    }
+    let docker_params = params->Array.join(" ")
     profile
     ->Profile.getPlatform
     ->Result.map(platform => {
@@ -135,7 +153,7 @@ let getJob = (
       | true =>
         [
           `docker login --username ${username} --password ${password} ${registry}`,
-          `docker build . --file ${file} --platform ${platform} --tag ${dockerTag}:${version}`,
+          `docker build . --file ${file} --platform ${platform} ${docker_params} --tag ${dockerTag}:${version}`,
           `docker push ${dockerTag}:${version}`,
         ]
         ->Array.concat(
