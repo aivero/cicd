@@ -37,6 +37,7 @@ let getJobs = (ints: array<Instance.t>) => {
           image: Some(image),
           needs: Some(needs->Array.uniq),
           cache: cache,
+          variables: Some([("GIT_SUBMODULE_STRATEGY", "recursive")]->Dict.fromArray),
         },
       ))
     )
