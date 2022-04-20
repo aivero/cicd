@@ -187,7 +187,12 @@ let getJob = (
           services: Some(["docker:20-dind"]),
           tags: tags,
           needs: Some(needs),
-          variables: Some(Dict.fromArray([("DOCKER_TLS_CERTDIR", "/certs")])),
+          variables: Some(
+            Dict.fromArray([
+              ("DOCKER_TLS_CERTDIR", "/certs"),
+              ("GIT_SUBMODULE_STRATEGY", "recursive"),
+            ]),
+          ),
         },
       )
     })
