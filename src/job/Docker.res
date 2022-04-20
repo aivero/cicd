@@ -141,7 +141,7 @@ let getJob = (
       }
     | true => profile->Profile.getTags->Result.toOption
     }
-    let docker_params = switch params {
+    let dockerParams = switch params {
     | Some(pa) => pa->Array.join(" ")
     | _ => {
         Console.log("Docker Mode: params are NOT set")
@@ -155,7 +155,7 @@ let getJob = (
       | true =>
         [
           `docker login --username ${username} --password ${password} ${registry}`,
-          `docker build . --file ${file} --platform ${platform} ${docker_params} --tag ${dockerTag}:${version}`,
+          `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
           `docker push ${dockerTag}:${version}`,
         ]
         ->Array.concat(
