@@ -34,6 +34,7 @@ type t = {
   image: option<string>,
   tags: array<string>,
   cache: option<Jobt.cache>,
+  manual: option<bool>,
 }
 
 let parseMode = str => {
@@ -111,6 +112,10 @@ let create = (int: Yaml.t, folderPath): t => {
   let bootstrap = switch int->Yaml.get("bootstrap") {
   | Yaml.Bool(bool) => bool
   | _ => false
+  }
+  let manual = switch int->Yaml.get("manual") {
+  | Yaml.Bool(manual) => Some(manual)
+  | _ => None
   }
   let image = switch int->Yaml.get("image") {
   | Yaml.String(image) => Some(image)
@@ -204,5 +209,6 @@ let create = (int: Yaml.t, folderPath): t => {
     image: image,
     tags: tags,
     cache: cache,
+    manual: manual,
   }
 }

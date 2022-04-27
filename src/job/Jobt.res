@@ -26,7 +26,9 @@ type t = {
   services: option<array<string>>,
   cache: option<cache>,
   retry: option<retry>,
-  artifacts: option<artifacts>
+  artifacts: option<artifacts>,
+  \"when": option<string>,
+  allow_failure: option<bool>
 }
 
 let default = {
@@ -42,4 +44,6 @@ let default = {
   cache: None,
   retry: None,
   artifacts: None,
+  \"when": None,
+  allow_failure: None
 }
