@@ -13,6 +13,8 @@ type dockerInstance = {
   beforeScript: array<string>,
   script: array<string>,
   afterScript: array<string>,
+  \"when": option<string>,
+  allow_failure: option<bool>,
 }
 
 let getName = (file, folder) => {
@@ -36,6 +38,7 @@ let getInstances = (
     beforeScript,
     script,
     afterScript,
+    manual,
   }: Instance.t,
 ): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
@@ -50,6 +53,10 @@ let getInstances = (
         }
       , []))
   | _ => None
+  }
+  let (\"when", allow_failure) = switch manual {
+  | Some(true) => (Some("manual"), Some(false))
+  | _ => (None, None)
   }
   profiles->Array.flatMap(profile =>
     switch file {
@@ -67,6 +74,8 @@ let getInstances = (
           beforeScript: beforeScript,
           script: script,
           afterScript: afterScript,
+          \"when": \"when",
+          allow_failure: allow_failure,
         },
       ]
     | None =>
@@ -89,6 +98,8 @@ let getInstances = (
         beforeScript: beforeScript,
         script: script,
         afterScript: afterScript,
+        \"when": \"when",
+        allow_failure: allow_failure,
       })
     }
   )
@@ -108,6 +119,8 @@ let getJob = (
     beforeScript,
     script,
     afterScript,
+    \"when",
+    allow_failure,
   }: dockerInstance,
 ) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
@@ -148,6 +161,7 @@ let getJob = (
         ""
       }
     }
+
     profile
     ->Profile.getPlatform
     ->Result.map(platform => {
@@ -193,6 +207,8 @@ let getJob = (
               ("GIT_SUBMODULE_STRATEGY", "recursive"),
             ]),
           ),
+          \"when": \"when",
+          allow_failure: allow_failure,
         },
       )
     })
