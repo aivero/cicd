@@ -70,7 +70,9 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan"]),
       tags: "linux-x86_64"->Profile.getTags->Result.toOption,
-      image: "linux-x86_64"->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+      image: "linux-x86_64"
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+      ->Result.toOption,
     },
   ),
   (
@@ -79,7 +81,9 @@ let extends = [
       ...Jobt.default,
       extends: Some([".conan"]),
       tags: "linux-armv8"->Profile.getTags->Result.toOption,
-      image: "linux-armv8"->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+      image: "linux-armv8"
+      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+      ->Result.toOption,
     },
   ),
   (
@@ -160,12 +164,7 @@ let getRepos = folder => {
 }
 
 let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstance) => {
-  [
-    ("NAME", name),
-    ("VERSION", version),
-    ("REPO", repoDev),
-    ("PROFILE", profile),
-  ]
+  [("NAME", name), ("VERSION", version), ("REPO", repoDev), ("PROFILE", profile)]
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
     switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
@@ -268,14 +267,29 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
         )
       ints->Array.map(({base, profile, extends} as int) => {
         `Found conan instance: ${base.name}/${base.version} (${profile})`->Console.log
+        let image = switch int.base.image {
+        | Some(image) => {
+            Console.log("Conan Mode: Image is set, using it as docker image")
+            Some(image)
+          }
+        | _ => {
+            Console.log("Conan Mode: Image is not set, using default")
+            None
+          }
+        }
         (
           `${base.name}/${base.version}`,
           {
             ...Jobt.default,
             variables: Some(int->getVariables),
             extends: Some(extends),
-            before_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript)),
-            after_script: Some([`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript)),
+            image: image,
+            before_script: Some(
+              [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript),
+            ),
+            after_script: Some(
+              [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
+            ),
             needs: Some(
               base.needs
               ->Array.concat(
@@ -283,7 +297,10 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
                 | Some(group) =>
                   group->Array.flatMap(pkg => {
                     switch pkg->String.split("@#") {
-                    | [pkg, _] => allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg) ? [pkg] : []
+                    | [pkg, _] =>
+                      allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
+                        ? [pkg]
+                        : []
                     | _ => []
                     }
                   })
@@ -345,7 +362,9 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             }),
           ),
         ),
-        image: Profile.default->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))->Result.toOption,
+        image: Profile.default
+        ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
+        ->Result.toOption,
         tags: Profile.default->Profile.getTags->Result.toOption,
         needs: switch buildOrder[buildOrder->Array.length - 1] {
         | Some(needs) =>
@@ -428,10 +447,7 @@ let getJobs = (ints: array<Instance.t>) => {
   ints
   ->init
   ->Task.flatMap(_ =>
-    ints
-    ->Array.map((int, ()) => int->getConanInstances)
-    ->Task.pool(Sys.cpus)
-    ->Task.map(Array.flat)
+    ints->Array.map((int, ()) => int->getConanInstances)->Task.pool(Sys.cpus)->Task.map(Array.flat)
   )
   ->Task.flatMap(ints =>
     ints->Array.empty
