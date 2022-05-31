@@ -21,7 +21,7 @@ let getImage = (profile, registry: option<string>, prefix) => {
   | _ => Error(`profile: arch in ${profile} not supported`)
   }
 
-  (registry, prefix, os, arch)->Result.seq4->Result.map(((registry, prefix, os, arch)) => `${registry}${prefix}${os}-${arch}`)
+  (registry, prefix, os, arch)->Result.seq4->Result.map(((registry, prefix, os, arch)) => `${registry}${prefix}${os}-${arch}/${profile}`)
 }
 
 let getPlatform = (profile) => {
