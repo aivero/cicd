@@ -14,7 +14,7 @@ let parseMode = str => {
   }
 }
 
-let hashLength = 3
+let hashLength = 4
 let hashN = Hash.hashN(_, hashLength)
 
 let handleDuplicates = jobs => {
