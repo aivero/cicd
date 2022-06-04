@@ -61,6 +61,7 @@ let extends = [
           "conan_data/$NAME/$VERSION/_/_/build/*/CMakeFiles/CMake*.log",
           "conan_data/$NAME/$VERSION/_/_/build/*/*/CMakeFiles/CMake*.log",
           "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log",
+          "conan_data/$NAME/$VERSION/_/_/build/*/metadata.yml",
         ]),
       }),
     },
