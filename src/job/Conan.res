@@ -36,13 +36,14 @@ let extends = [
         "c config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
         "c config set general.default_profile=$PROFILE",
         "c config set storage.path=$CONAN_DATA_PATH",
-        "C_LOGIN=\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \"",
+        "C_LOGIN=\\\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \\\"",
         "c user $C_LOGIN $CONAN_REPO_ALL",
         "c user $C_LOGIN $CONAN_REPO_DEV_ALL",
         "c user $C_LOGIN $CONAN_REPO_DEV_INTERNAL",
         "c user $C_LOGIN $CONAN_REPO_DEV_PUBLIC",
         "c create -u . $NAME/$VERSION@ $ARGS",
         "c upload $NAME/$VERSION@ --all -c -r $REPO",
+        "[[ -n $UPLOAD_ALIAS ]] && c upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
       ]),
       cache: Some({
         key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
@@ -66,46 +67,10 @@ let extends = [
     },
   ),
   (
-    ".conan-alias",
-    {
-      ...Jobt.default,
-      script: Some([
-        "alias c=conan",
-        "c config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
-        "c config set general.default_profile=$PROFILE",
-        "c config set storage.path=$CONAN_DATA_PATH",
-        "C_LOGIN=\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \"",
-        "c user $C_LOGIN $CONAN_REPO_ALL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_ALL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_INTERNAL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_PUBLIC",
-        "c create -u . $NAME/$VERSION@ $ARGS",
-        "c upload $NAME/$VERSION@ --all -c -r $REPO",
-        "c upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
-      ]),
-    },
-  ),
-  (
     ".conan-x86_64",
     {
       ...Jobt.default,
       extends: Some([".conan"]),
-      variables: Some(
-        [
-          ("PROFILE", "linux-x86_64"),
-        ]->Dict.fromArray,
-      ),
-      tags: "linux-x86_64"->Profile.getTags->Result.toOption,
-      image: "linux-x86_64"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
-      ->Result.toOption,
-    },
-  ),
-  (
-    ".conan-x86_64-alias",
-    {
-      ...Jobt.default,
-      extends: Some([".conan-alias"]),
       variables: Some(
         [
           ("PROFILE", "linux-x86_64"),
@@ -134,22 +99,6 @@ let extends = [
     },
   ),
   (
-    ".conan-armv8-alias",
-    {
-      ...Jobt.default,
-      extends: Some([".conan-alias"]),
-      variables: Some(
-        [
-          ("PROFILE", "linux-armv8"),
-        ]->Dict.fromArray,
-      ),
-      tags: "linux-armv8"->Profile.getTags->Result.toOption,
-      image: "linux-armv8"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
-      ->Result.toOption,
-    },
-  ),
-  (
     ".conan-x86_64-bootstrap",
     {
       ...Jobt.default,
@@ -161,32 +110,10 @@ let extends = [
     },
   ),
   (
-    ".conan-x86_64-bootstrap-alias",
-    {
-      ...Jobt.default,
-      extends: Some([".conan-x86_64-alias"]),
-      image: "linux-x86_64"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
-      ->Result.toOption
-      ->Option.map(image => image ++ "-bootstrap"),
-    },
-  ),
-  (
     ".conan-armv8-bootstrap",
     {
       ...Jobt.default,
       extends: Some([".conan-armv8"]),
-      image: "linux-armv8"
-      ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
-      ->Result.toOption
-      ->Option.map(image => image ++ "-bootstrap"),
-    },
-  ),
-  (
-    ".conan-armv8-bootstrap-alias",
-    {
-      ...Jobt.default,
-      extends: Some([".conan-armv8-alias"]),
       image: "linux-armv8"
       ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
       ->Result.toOption
@@ -259,6 +186,12 @@ let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstan
   | _ => [("REPO", repoDev)]
   })
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
+  ->Array.concat(
+    switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
+    | Some(_) => [("UPLOAD_ALIAS", "1")]
+    | _ => []
+    },
+  )
   ->Dict.fromArray
 }
 
@@ -324,7 +257,7 @@ let getBuildOrder = (ints: array<conanInstance>) => {
   })
 }
 
-let getExtends = ((profile, version, bootstrap)) => {
+let getExtends = ((profile, bootstrap)) => {
   let base = ".conan"
 
   let triple = profile->String.split("-")->List.fromArray
@@ -335,14 +268,9 @@ let getExtends = ((profile, version, bootstrap)) => {
   | _ => Error(`Could not detect image arch for profile: ${profile}`)
   }
 
-  let bootstrap = bootstrap ? "-bootstrap" : ""
+  let end = bootstrap ? "-bootstrap" : ""
 
-  let alias = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
-    | Some(_) => "-alias"
-    | _ => ""
-  }
-
-  arch->Result.map(arch => [`${base}-${arch}${bootstrap}${alias}`])
+  arch->Result.map(arch => [`${base}-${arch}${end}`])
 }
 
 let getJob = (allInts: array<conanInstance>, buildOrder) => {
@@ -427,7 +355,7 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             "alias cdw=conan download",
             "c config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
             "c config set storage.path=$CONAN_DATA_PATH",
-            "C_LOGIN=\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \"",
+            "C_LOGIN=\\\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \\\"",
             "c user $C_LOGIN $CONAN_REPO_INTERNAL",
             "c user $C_LOGIN $CONAN_REPO_PUBLIC",
             "c user $C_LOGIN $CONAN_REPO_DEV_INTERNAL",
@@ -495,7 +423,7 @@ let getConanInstances = (int: Instance.t) => {
 
   int.profiles
   ->Array.map(profile => {
-    let extends = (profile, version, int.bootstrap)->getExtends
+    let extends = (profile, int.bootstrap)->getExtends
     (extends, repos)
     ->Result.seq2
     ->Task.fromResult

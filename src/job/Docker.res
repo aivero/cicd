@@ -128,7 +128,7 @@ let getJob = (
   ->Tuple.map2(Env.getError)
   ->Result.seq2
   ->Result.flatMap(((username, password)) => {
-    let dockerTag = `\${DOCKER_REGISTRY}\${DOCKER_PREFIX}${name}/${profile}`
+    let dockerTag = `\$DOCKER_REGISTRY\$DOCKER_PREFIX${name}/${profile}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => true
     | _ => false
@@ -169,7 +169,7 @@ let getJob = (
       | true =>
         [
           `alias d=docker`,
-          `D_TAG="${dockerTag}:${version}"`,
+          `D_TAG=\\\"${dockerTag}:${version}\\\"`,
           `d login --username ${username} --password ${password} \$DOCKER_REGISTRY`,
           `d build . --file ${file} --platform ${platform} ${dockerParams} --tag \$D_TAG`,
           `d push \$D_TAG`,
