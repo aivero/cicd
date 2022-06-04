@@ -169,14 +169,15 @@ let getJob = (
       | true =>
         [
           `alias d=docker`,
+          `D_TAG="${dockerTag}:${version}"`,
           `d login --username ${username} --password ${password} \$DOCKER_REGISTRY`,
-          `d build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
-          `d push ${dockerTag}:${version}`,
+          `d build . --file ${file} --platform ${platform} ${dockerParams} --tag \$D_TAG`,
+          `d push \$D_TAG`,
         ]
         ->Array.concat(
           branchTagUpload
             ? [
-                `d tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `d tag \$D_TAG ${dockerTag}:$CI_COMMIT_REF_NAME`,
                 `d push ${dockerTag}:$CI_COMMIT_REF_NAME`,
               ]
             : [],
@@ -184,7 +185,7 @@ let getJob = (
         ->Array.concat(
           latestTagUpload
             ? [
-                `d tag ${dockerTag}:${version} ${dockerTag}:latest`,
+                `d tag \$D_TAG ${dockerTag}:latest`,
                 `d push ${dockerTag}:latest`,
               ]
             : [],
