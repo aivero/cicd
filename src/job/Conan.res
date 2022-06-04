@@ -25,7 +25,6 @@ let extends = [
         [
           ("CONAN_USER_HOME", "$CI_PROJECT_DIR"),
           ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
-          ("GIT_SUBMODULE_STRATEGY", "recursive"),
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo"),
           ("SCCACHE_DIR", "$CI_PROJECT_DIR/.sccache"),
           ("GIT_CLEAN_FLAGS", "-x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**"),

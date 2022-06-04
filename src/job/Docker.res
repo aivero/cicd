@@ -205,7 +205,6 @@ let getJob = (
           variables: Some(
             Dict.fromArray([
               ("DOCKER_TLS_CERTDIR", "/certs"),
-              ("GIT_SUBMODULE_STRATEGY", "recursive"),
             ]),
           ),
           \"when": \"when",
