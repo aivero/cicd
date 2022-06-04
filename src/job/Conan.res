@@ -29,6 +29,7 @@ let extends = [
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo"),
           ("SCCACHE_DIR", "$CI_PROJECT_DIR/.sccache"),
           ("GIT_CLEAN_FLAGS", "-x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**"),
+          ("REPO", "$CONAN_REPO_DEV_PUBLIC"),
         ]->Dict.fromArray,
       ),
       script: Some([
@@ -174,10 +175,14 @@ let getRepos = folder => {
 }
 
 let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstance) => {
-  [("NAME", name), ("VERSION", version), ("REPO", repoDev)]
+  [("NAME", name), ("VERSION", version)]
   ->Array.concat(switch profile {
   | "linux-x86_64" | "linux-armv8" => []
   | _ => [("PROFILE", profile)]
+  })
+  ->Array.concat(switch repoDev {
+  | "$CONAN_REPO_DEV_PUBLIC" => []
+  | _ => [("REPO", repoDev)]
   })
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
