@@ -38,10 +38,10 @@ let handleDuplicates = jobs => {
           firstNeeds
             ->Option.map(Array.length)
         ) {
-        | (false, _) => subJobs
-        | (true, Some(0)) => subJobs
-        | (true, Some(1)) => subJobs
-        | (true, Some(2)) => subJobs
+        | (false, _) => jobs
+        | (true, Some(0)) => jobs
+        | (true, Some(1)) => jobs
+        | (true, Some(2)) => jobs
         | _ => {
           let needsKey = `${key}-needs`
           let needsJob = (
