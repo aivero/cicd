@@ -36,11 +36,10 @@ let extends = [
         "c config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
         "c config set general.default_profile=$PROFILE",
         "c config set storage.path=$CONAN_DATA_PATH",
-        "C_LOGIN=\\\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \\\"",
-        "c user $C_LOGIN $CONAN_REPO_ALL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_ALL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_INTERNAL",
-        "c user $C_LOGIN $CONAN_REPO_DEV_PUBLIC",
+        "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL",
+        "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL",
+        "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
+        "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
         "c create -u . $NAME/$VERSION@ $ARGS",
         "c upload $NAME/$VERSION@ --all -c -r $REPO",
         "[[ -n $UPLOAD_ALIAS ]] && c upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
@@ -351,15 +350,12 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
         script: Some(
           [
             "alias c=conan",
-            "alias cup=conan upload",
-            "alias cdw=conan download",
             "c config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
             "c config set storage.path=$CONAN_DATA_PATH",
-            "C_LOGIN=\\\"$CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r \\\"",
-            "c user $C_LOGIN $CONAN_REPO_INTERNAL",
-            "c user $C_LOGIN $CONAN_REPO_PUBLIC",
-            "c user $C_LOGIN $CONAN_REPO_DEV_INTERNAL",
-            "c user $C_LOGIN $CONAN_REPO_DEV_PUBLIC",
+            "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_INTERNAL",
+            "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_PUBLIC",
+            "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
+            "c user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
           ]->Array.concat(
             buildOrder
             ->Array.flat
@@ -381,13 +377,13 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             }, [])
             ->Array.flatMap(((name, version, repo, repoDev)) => {
               [
-                `cdw ${name}/${version}@ -r ${repoDev}`,
-                `cup upload ${name}/${version}@ --all -c -r ${repo}`,
+                `c download ${name}/${version}@ -r ${repoDev}`,
+                `c upload ${name}/${version}@ --all -c -r ${repo}`,
               ]->Array.concat(
                 switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
                 | Some(_) => [
-                    `cdw download ${name}/$CI_COMMIT_REF_NAME@ -r ${repoDev}`,
-                    `cup upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`,
+                    `c download ${name}/$CI_COMMIT_REF_NAME@ -r ${repoDev}`,
+                    `c upload ${name}/$CI_COMMIT_REF_NAME@ --all -c -r ${repo}`,
                   ]
                 | _ => []
                 },
