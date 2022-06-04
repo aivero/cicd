@@ -124,11 +124,11 @@ let getJob = (
   }: dockerInstance,
 ) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
-  ("DOCKER_USER", "DOCKER_PASSWORD", "DOCKER_REGISTRY", "DOCKER_PREFIX")
-  ->Tuple.map4(Env.getError)
-  ->Result.seq4
-  ->Result.flatMap(((username, password, registry, prefix)) => {
-    let dockerTag = `${registry}${prefix}${name}/${profile}`
+  ("DOCKER_USER", "DOCKER_PASSWORD")
+  ->Tuple.map2(Env.getError)
+  ->Result.seq2
+  ->Result.flatMap(((username, password)) => {
+    let dockerTag = `\$DOCKER_REGISTRY\$DOCKER_PREFIX${name}/${profile}`
     let branchTagUpload = switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
     | Some(_) => true
     | _ => false
@@ -168,7 +168,7 @@ let getJob = (
       let script = switch script->Array.empty {
       | true =>
         [
-          `docker login --username ${username} --password ${password} ${registry}`,
+          `docker login --username ${username} --password ${password} \$DOCKER_REGISTRY`,
           `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
           `docker push ${dockerTag}:${version}`,
         ]
