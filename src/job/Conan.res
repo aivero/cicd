@@ -69,6 +69,11 @@ let extends = [
     {
       ...Jobt.default,
       extends: Some([".conan"]),
+      variables: Some(
+        [
+          ("PROFILE", "linux-x86_64"),
+        ]->Dict.fromArray,
+      ),
       tags: "linux-x86_64"->Profile.getTags->Result.toOption,
       image: "linux-x86_64"
       ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
@@ -80,6 +85,11 @@ let extends = [
     {
       ...Jobt.default,
       extends: Some([".conan"]),
+      variables: Some(
+        [
+          ("PROFILE", "linux-armv8"),
+        ]->Dict.fromArray,
+      ),
       tags: "linux-armv8"->Profile.getTags->Result.toOption,
       image: "linux-armv8"
       ->Profile.getImage(Env.get("CONAN_DOCKER_REGISTRY"), Env.get("CONAN_DOCKER_PREFIX"))
@@ -164,7 +174,11 @@ let getRepos = folder => {
 }
 
 let getVariables = ({base: {name, version}, profile, args, repoDev}: conanInstance) => {
-  [("NAME", name), ("VERSION", version), ("REPO", repoDev), ("PROFILE", profile)]
+  [("NAME", name), ("VERSION", version), ("REPO", repoDev)]
+  ->Array.concat(switch profile {
+  | "linux-x86_64" | "linux-armv8" => []
+  | _ => [("PROFILE", profile)]
+  })
   ->Array.concat(args->Array.empty ? [] : [("ARGS", args->Array.join(" "))])
   ->Array.concat(
     switch version->String.match(%re("/^[0-9a-f]{40}$/")) {
