@@ -168,23 +168,24 @@ let getJob = (
       let script = switch script->Array.empty {
       | true =>
         [
-          `docker login --username ${username} --password ${password} \$DOCKER_REGISTRY`,
-          `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
-          `docker push ${dockerTag}:${version}`,
+          `alias d=docker`,
+          `d login --username ${username} --password ${password} \$DOCKER_REGISTRY`,
+          `d build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
+          `d push ${dockerTag}:${version}`,
         ]
         ->Array.concat(
           branchTagUpload
             ? [
-                `docker tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
-                `docker push ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `d tag ${dockerTag}:${version} ${dockerTag}:$CI_COMMIT_REF_NAME`,
+                `d push ${dockerTag}:$CI_COMMIT_REF_NAME`,
               ]
             : [],
         )
         ->Array.concat(
           latestTagUpload
             ? [
-                `docker tag ${dockerTag}:${version} ${dockerTag}:latest`,
-                `docker push ${dockerTag}:latest`,
+                `d tag ${dockerTag}:${version} ${dockerTag}:latest`,
+                `d push ${dockerTag}:latest`,
               ]
             : [],
         )
