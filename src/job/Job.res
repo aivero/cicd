@@ -24,17 +24,25 @@ let handleDuplicates = jobs => {
     switch group {
     | [job] => [job]
     | jobs => {
-        let jobs = jobs->Array.map(((key, job)) => (`${key}@${job->hashN}`, job))
-        let needs = jobs->Array.map(((_, job)) => job.needs)
-        let firstNeeds = needs[0]
+        let subJobs = jobs->Array.map(((key, job)) => (`${key}@${job->hashN}`, job))
+        let needs = subJobs->Array.map(((_, job)) => job.needs)
+        let firstNeeds = needs[0]->Option.flat
         let allNeedsAreTheSame = needs
-          ->Array.map((needs) => Some(needs) == firstNeeds)
+          ->Array.map((needs) => needs == firstNeeds)
           ->Array.reduce((acc, theSame) => {
             acc && theSame
           }, true)
 
-        let jobs = switch allNeedsAreTheSame {
-        | true => {
+        let allThejobs = switch (
+          allNeedsAreTheSame,
+          firstNeeds
+            ->Option.map(Array.length)
+        ) {
+        | (false, _) => jobs
+        | (true, Some(0)) => jobs
+        | (true, Some(1)) => jobs
+        | (true, Some(2)) => jobs
+        | _ => {
           let needsKey = `${key}-needs`
           let needsJob = (
             needsKey,
@@ -42,11 +50,11 @@ let handleDuplicates = jobs => {
               ...Jobt.default,
               script: Some(["echo"]),
               tags: Some(["x86_64"]),
-              needs: firstNeeds->Option.flat,
+              needs: firstNeeds,
             },
           )
 
-          jobs
+          subJobs
             ->Array.map(((key, job)) => (
               key,
               {
@@ -56,17 +64,16 @@ let handleDuplicates = jobs => {
             ))
             ->Array.concat([needsJob])
         }
-        | false => jobs
         }
 
-        jobs->Array.concat([
+        allThejobs->Array.concat([
           (
             key,
             {
               ...Jobt.default,
               script: Some(["echo"]),
               tags: Some(["x86_64"]),
-              needs: Some(jobs->Array.map(((key, _)) => key)),
+              needs: Some(subJobs->Array.map(((key, _)) => key)),
             },
           ),
         ])
