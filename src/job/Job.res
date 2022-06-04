@@ -25,40 +25,6 @@ let handleDuplicates = jobs => {
     | [job] => [job]
     | jobs => {
         let jobs = jobs->Array.map(((key, job)) => (`${key}@${job->hashN}`, job))
-        let needs = jobs->Array.map(((_, job)) => job.needs)
-        let firstNeeds = needs[0]
-        let allNeedsAreTheSame = needs
-          ->Array.map((needs) => Some(needs) == firstNeeds)
-          ->Array.reduce((acc, theSame) => {
-            acc && theSame
-          }, true)
-
-        let jobs = switch allNeedsAreTheSame {
-        | true => {
-          let needsKey = `${key}-needs`
-          let needsJob = (
-            needsKey,
-            {
-              ...Jobt.default,
-              script: Some(["echo"]),
-              tags: Some(["x86_64"]),
-              needs: firstNeeds->Option.flat,
-            },
-          )
-
-          jobs
-            ->Array.map(((key, job)) => (
-              key,
-              {
-                ...job,
-                needs: Some([needsKey])
-              }
-            ))
-            ->Array.concat([needsJob])
-        }
-        | false => jobs
-        }
-
         jobs->Array.concat([
           (
             key,
