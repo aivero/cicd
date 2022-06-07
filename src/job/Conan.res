@@ -40,6 +40,7 @@ let extends = [
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
         "conan create -u . $NAME/$VERSION@ $ARGS",
+        "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $REPO",
         "conan upload $NAME/$VERSION@ --all -c -r $REPO",
         "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
       ]),
@@ -256,6 +257,32 @@ let getExtends = ((profile, bootstrap)) => {
 let getJob = (allInts: array<conanInstance>, buildOrder) => {
   buildOrder
   ->Array.flatMapWithIndex((index, group) => {
+    let groupJobName = `group-job-${index->Int.toString}`
+    let groupJob = (
+      groupJobName,
+      {
+        ...Jobt.default,
+        script: Some(["echo"]),
+        tags: Some(["x86_64"]),
+        needs: Some(
+          switch buildOrder[index - 1] {
+          | Some(group) =>
+            group->Array.flatMap(pkg => {
+              switch pkg->String.split("@#") {
+              | [pkg, _] =>
+                allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
+                  ? [pkg]
+                  : []
+              | _ => []
+              }
+            })
+          | None => []
+          }
+          ->Array.uniq,
+        ),
+      },
+    )
+
     group->Array.flatMap(pkg => {
       let (pkg, pkgRevision) = switch pkg->String.split("@#") {
       | [pkg, pkgRevision] => (pkg, pkgRevision)
@@ -290,29 +317,12 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             after_script: Some(
               [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
             ),
-            needs: Some(
-              base.needs
-              ->Array.concat(
-                switch buildOrder[index - 1] {
-                | Some(group) =>
-                  group->Array.flatMap(pkg => {
-                    switch pkg->String.split("@#") {
-                    | [pkg, _] =>
-                      allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
-                        ? [pkg]
-                        : []
-                    | _ => []
-                    }
-                  })
-                | None => []
-                },
-              )
-              ->Array.uniq,
-            ),
+            needs: Some(base.needs->Array.concat([groupJobName])),
           },
         )
       })
     })
+    ->Array.concat([groupJob])
   })
   ->Array.concat([
     (
