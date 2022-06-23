@@ -328,7 +328,7 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             after_script: Some(
               [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
             ),
-            needs: Some(base.needs->Array.concat(groupJobNeededInOutPut)),
+            needs: Some(base.needs->Array.concat(groupJobNeededInOutPut)->Array.uniq),
           },
         )
       })
