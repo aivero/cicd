@@ -32,7 +32,7 @@ let handleDuplicates = jobs => {
               ...Jobt.default,
               script: Some(["echo"]),
               tags: Some(["x86_64"]),
-              needs: Some(jobs->Array.map(((key, _)) => key)),
+              needs: Some(jobs->Array.map(((key, _)) => key)->Array.uniq),
             },
           ),
         ])
