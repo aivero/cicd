@@ -198,10 +198,10 @@ let init = (ints: array<Instance.t>) => {
     ->Task.fromResult
     ->Task.flatMap(((user, passwd)) => {
       [
-        "$CONAN_REPO_INTERNAL",
-        "$CONAN_REPO_DEV_INTERNAL",
-        "$CONAN_REPO_PUBLIC",
-        "$CONAN_REPO_DEV_PUBLIC",
+        "CONAN_REPO_INTERNAL",
+        "CONAN_REPO_DEV_INTERNAL",
+        "CONAN_REPO_PUBLIC",
+        "CONAN_REPO_DEV_PUBLIC",
       ]
       ->Array.map(Env.getError)
       ->Result.seq
