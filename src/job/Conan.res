@@ -191,17 +191,28 @@ let init = (ints: array<Instance.t>) => {
     ->Task.flatMap(((url, dir)) => Proc.run(["conan", "config", "install", url, "-sf", dir]))
 
   config
-  ->Task.flatMap(_ =>
-    ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD", "CONAN_REPO_ALL", "CONAN_REPO_DEV_ALL")
-    ->Tuple.map4(Env.getError)
-    ->Result.seq4
+  ->Task.flatMap(_ => {
+    ("CONAN_LOGIN_USERNAME", "CONAN_LOGIN_PASSWORD")
+    ->Tuple.map2(Env.getError)
+    ->Result.seq2
     ->Task.fromResult
-    ->Task.flatMap(((user, passwd, repo, repo_dev)) =>
-      Proc.run(["conan", "user", user, "-p", passwd, "-r", repo])->Task.flatMap(_ =>
-        Proc.run(["conan", "user", user, "-p", passwd, "-r", repo_dev])
+    ->Task.flatMap(((user, passwd)) => {
+      [
+        "$CONAN_REPO_INTERNAL",
+        "$CONAN_REPO_DEV_INTERNAL",
+        "$CONAN_REPO_PUBLIC",
+        "$CONAN_REPO_DEV_PUBLIC",
+      ]
+      ->Array.map(Env.getError)
+      ->Result.seq
+      ->Task.fromResult
+      ->Task.flatMap(res =>
+        res
+        ->Array.map(repo => Proc.run(["conan", "user", user, "-p", passwd, "-r", repo]))
+        ->Task.seq
       )
-    )
-  )
+    })
+  })
   ->Task.flatMap(_ =>
     exportPkgs
     ->Array.map(((pkg, folder), ()) => {
@@ -263,15 +274,12 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
       group->Array.flatMap(pkg => {
         switch pkg->String.split("@#") {
         | [pkg, _] =>
-          allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
-            ? [pkg]
-            : []
+          allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg) ? [pkg] : []
         | _ => []
         }
       })
     | None => []
-    }
-    ->Array.uniq
+    }->Array.uniq
 
     let groupJob = (
       groupJobName,
@@ -294,7 +302,8 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
     | _ => [groupJobName]
     }
 
-    group->Array.flatMap(pkg => {
+    group
+    ->Array.flatMap(pkg => {
       let (pkg, pkgRevision) = switch pkg->String.split("@#") {
       | [pkg, pkgRevision] => (pkg, pkgRevision)
       | _ => ("invalid-pkg", "invalid-rev")
