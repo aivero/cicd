@@ -40,3 +40,32 @@ child-pipeline-git:
     include:
       - artifact: generated-config.yml
         job: generate-config-git
+dry-run:triage:
+  image: ruby
+  stage: build
+  script:
+    - gem install gitlab-triage
+    - gitlab-triage --help
+    - gitlab-triage --dry-run --token $API_TOKEN --source projects --source-id $CI_PROJECT_PATH
+  when: manual
+  except:
+    - schedules
+
+policy:run:
+  image: ruby
+  stage: build
+  script:
+    - gem install gitlab-triage
+    - gitlab-triage --token $API_TOKEN --source projects --source-id $CI_PROJECT_PATH
+  when: manual
+  except:
+    - schedules
+
+schedule:policyrun:
+  image: ruby
+  stage: build
+  script:
+    - gem install gitlab-triage
+    - gitlab-triage --token $API_TOKEN --source projects --source-id $CI_PROJECT_PATH
+  only:
+    - schedules
