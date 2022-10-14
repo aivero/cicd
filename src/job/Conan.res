@@ -18,6 +18,17 @@ type conanInfo = {
 
 let extends = [
   (
+    ".git-strat-none",
+    {
+      ...Jobt.default,
+      variables: Some(
+        [
+          ("GIT_STRATEGY", "none"),
+        ]->Dict.fromArray,
+      ),
+    },
+  ),
+  (
     ".conan",
     {
       ...Jobt.default,
@@ -349,6 +360,7 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
       "conan-upload",
       {
         ...Jobt.default,
+        extends: Some([".git-strat-none"]),
         script: Some(
           [
             "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
