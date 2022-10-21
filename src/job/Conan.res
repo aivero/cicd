@@ -16,18 +16,20 @@ type conanInfo = {
   reference: string,
 }
 
+let git_strat_none = (
+  ".git-strat-none",
+  {
+    ...Jobt.default,
+    variables: Some(
+      [
+        ("GIT_STRATEGY", "none"),
+      ]->Dict.fromArray,
+    ),
+  },
+)
+
 let extends = [
-  (
-    ".git-strat-none",
-    {
-      ...Jobt.default,
-      variables: Some(
-        [
-          ("GIT_STRATEGY", "none"),
-        ]->Dict.fromArray,
-      ),
-    },
-  ),
+  git_strat_none,
   (
     ".conan",
     {
@@ -493,7 +495,7 @@ let getJobs = (ints: array<Instance.t>) => {
   )
   ->Task.flatMap(ints =>
     ints->Array.empty
-      ? []->Task.to
+      ? [git_strat_none]->Task.to
       : ints
         ->getBuildOrder
         ->Task.map(buildOrder => ints->getJob(buildOrder))
