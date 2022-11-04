@@ -362,7 +362,6 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
       "conan-upload",
       {
         ...Jobt.default,
-        extends: Some([".git-strat-none"]),
         script: Some(
           [
             "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
