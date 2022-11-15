@@ -17,14 +17,6 @@ type dockerInstance = {
   allow_failure: option<bool>,
 }
 
-let getName = (file, folder) => {
-  switch (file->String.split("."))[0] {
-  | Some("Dockerfile") => folder->Path.basename
-  | Some(name) => name
-  | _ => folder->Path.basename
-  }
-}
-
 let getInstances = (
   {
     name,
@@ -167,11 +159,22 @@ let getJob = (
     ->Result.map(platform => {
       let script = switch script->Array.empty {
       | true =>
-        [
-          `docker login --username ${username} --password ${password} ${registry}`,
-          `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
-          `docker push ${dockerTag}:${version}`,
-        ]
+        let dependencyProxy = Env.get("DOCKER_DEPENDENCY_PROXY")
+
+        let proxy = switch dependencyProxy {
+        | None => []
+        | Some(proxyRegistry) => [
+            `docker login --username ${username} --password ${password} ${proxyRegistry}`,
+          ]
+        }
+        Array.concat(
+          proxy,
+          [
+            `docker login --username ${username} --password ${password} ${registry}`,
+            `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
+            `docker push ${dockerTag}:${version}`,
+          ],
+        )
         ->Array.concat(
           branchTagUpload
             ? [
