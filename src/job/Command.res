@@ -15,6 +15,7 @@ let getJobs = (ints: array<Instance.t>) => {
     needs,
     cache,
     profiles,
+    rules,
   }) => {
     profiles->Array.map(profile =>
       {
@@ -38,6 +39,7 @@ let getJobs = (ints: array<Instance.t>) => {
           needs: Some(needs->Array.uniq),
           cache: cache,
           variables: Some([("GIT_SUBMODULE_STRATEGY", "recursive")]->Dict.fromArray),
+          rules: rules,
         },
       ))
     )

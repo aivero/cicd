@@ -1,17 +1,22 @@
 type cache = {
   key: option<string>,
-  paths: array<string>
+  paths: array<string>,
 }
 
 type retry = {
   max: option<int>,
-  \"when": option<array<string>>
+  \"when": option<array<string>>,
 }
 
 type artifacts = {
   expire_in: option<string>,
   paths: option<array<string>>,
-  \"when": option<string>
+  \"when": option<string>,
+}
+
+type rule = {
+  \"if": option<string>,
+  \"when": option<string>,
 }
 
 type t = {
@@ -28,7 +33,8 @@ type t = {
   retry: option<retry>,
   artifacts: option<artifacts>,
   \"when": option<string>,
-  allow_failure: option<bool>
+  allow_failure: option<bool>,
+  rules: option<array<rule>>,
 }
 
 let default = {
@@ -38,12 +44,13 @@ let default = {
   needs: None,
   services: None,
   variables: None,
-  before_script:  None,
+  before_script: None,
   script: None,
-  after_script:  None,
+  after_script: None,
   cache: None,
   retry: None,
   artifacts: None,
   \"when": None,
-  allow_failure: None
+  allow_failure: None,
+  rules: None
 }

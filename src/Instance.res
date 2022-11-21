@@ -35,6 +35,7 @@ type t = {
   tags: array<string>,
   cache: option<Jobt.cache>,
   manual: option<bool>,
+  rules: option<array<Jobt.rule>>,
 }
 
 let parseMode = str => {
@@ -191,6 +192,36 @@ let create = (int: Yaml.t, folderPath): t => {
     }
   | _ => None
   }
+  let rules = int->Yaml.get("rules")
+  let rules: option<array<rule>> = switch rules {
+  | Yaml.Array(rulesArray) =>
+    let array = rulesArray->Array.reduce((rulesAcc, rule) => {
+      switch (rule->Yaml.get("if"), rule->Yaml.get("when")) {
+      | (Yaml.String(entryIf), Yaml.String(entryWhen)) =>
+        rulesAcc->Array.concat([
+          {
+            \"if": Some(entryIf),
+            \"when": Some(entryWhen),
+          },
+        ])
+
+      | (Yaml.String(entryIf), _) =>
+        rulesAcc->Array.concat([
+          {
+            \"if": Some(entryIf),
+            \"when": None,
+          },
+        ])
+      | _ => []
+      }
+    }, [])
+    if array->Array.length >= 0 {
+      Some(array)
+    } else {
+      None
+    }
+  | _ => None
+  }
   {
     name: name,
     version: version,
@@ -210,5 +241,6 @@ let create = (int: Yaml.t, folderPath): t => {
     tags: tags,
     cache: cache,
     manual: manual,
+    rules: rules,
   }
 }
