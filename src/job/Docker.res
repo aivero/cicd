@@ -169,6 +169,7 @@ let getJob = (
       | true =>
         [
           `docker login --username ${username} --password ${password} ${registry}`,
+          "docker login -u $CI_DEPENDENCY_PROXY_USER -p $CI_DEPENDENCY_PROXY_PASSWORD $CI_DEPENDENCY_PROXY_SERVER",
           `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
           `docker push ${dockerTag}:${version}`,
         ]
