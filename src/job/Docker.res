@@ -160,7 +160,7 @@ let getJob = (
       let script = switch script->Array.empty {
       | true =>
         [
-          "docker login -u \$CI_DEPENDENCY_PROXY_USER -p \$CI_DEPENDENCY_PROXY_PASSWORD \$CI_DEPENDENCY_PROXY_SERVER",
+          "docker login -u $CI_DEPENDENCY_PROXY_USER -p $CI_DEPENDENCY_PROXY_PASSWORD $CI_DEPENDENCY_PROXY_SERVER",
           `docker login --username ${username} --password ${password} ${registry}`,
           `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
           `docker push ${dockerTag}:${version}`,

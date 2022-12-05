@@ -104,3 +104,11 @@ yarn dev # Development mode
 
 yarn start # Start on current repo
 ```
+
+### Run from workspace
+
+```
+cd contrib
+cd ../workspace
+CONAN_LOGIN_PASSWORD=YOUR_PW  CONAN_LOGIN_USERNAME=YOUR_USER component=dcd-docker DOCKER_USER=docker DOCKER_PASSWORD=docker_pw DOCKER_REGISTRY=https://registry.gitlab.com DOCKER_PREFIX=aivero/prop CONAN_REPO_DEV_PUBLIC=dev-public CONAN_REPO_PUBLIC=aivero-public CONAN_REPO_INTERNAL=aivero-internal CONAN_REPO_DEV_INTERNAL=dev-internal CONAN_CONFIG_DIR=conan-config-cicd CONAN_CONFIG_URL=https://gitlab.com/aivero/open-source/conan-config/-/archive/cicd/conan-config-cicd.tar.gz CI_COMMIT_SHA=3da80c4fa5341cb047d4faf7e0d7fc06661f3d14 CI_COMMIT_REF_NAME=master deno run --unstable --allow-all --import-map ../cicd/import_map.json ../cicd/lib/es6/src/GenerateConfig.js
+```
