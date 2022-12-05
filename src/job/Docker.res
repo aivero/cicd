@@ -159,18 +159,21 @@ let getJob = (
     ->Result.map(platform => {
       let script = switch script->Array.empty {
       | true =>
-        let dependencyProxy = Env.get("DOCKER_DEPENDENCY_PROXY")
+        let dependencyProxy = Env.get("CI_DEPENDENCY_PROXY_SERVER")
+        let proxyUser = Env.get("CI_DEPENDENCY_PROXY_USER")
+        let proxyPassword = Env.get("CI_DEPENDENCY_PROXY_PASSWORD")
 
-        let proxy = switch dependencyProxy {
-        | None => []
-        | Some(proxyRegistry) => [
+        let proxy = switch (dependencyProxy, proxyUser, proxyPassword) {
+        | (Some(proxyRegistry), Some(user), Some(pass)) => [
             `docker login --username ${username} --password ${password} ${proxyRegistry}`,
+          ]
+        | _ => [
+            `docker login --username ${username} --password ${password} ${registry}`,
           ]
         }
         Array.concat(
           proxy,
           [
-            `docker login --username ${username} --password ${password} ${registry}`,
             `docker build . --file ${file} --platform ${platform} ${dockerParams} --tag ${dockerTag}:${version}`,
             `docker push ${dockerTag}:${version}`,
           ],
