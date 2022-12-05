@@ -160,12 +160,14 @@ let getJob = (
       let script = switch script->Array.empty {
       | true =>
         let dependencyProxy = Env.get("DOCKER_DEPENDENCY_PROXY")
+        let dependencyProxyUser = Env.get("CI_DEPENDENCY_PROXY_USER")
+        let dependencyProxyPassword = Env.get("CI_DEPENDENCY_PROXY_PASSWORD")
 
-        let proxy = switch dependencyProxy {
-        | None => []
-        | Some(proxyRegistry) => [
-            `docker login --username ${username} --password ${password} ${proxyRegistry}`,
+        let proxy = switch (dependencyProxyUser, dependencyProxyPassword, dependencyProxy) {
+        | (Some(dPUsername), Some(dPPw),Some(proxyRegistry)) => [
+            `docker login --username ${dPUsername} --password ${dPPw} ${proxyRegistry}`,
           ]
+        | _ => []
         }
         Array.concat(
           proxy,
