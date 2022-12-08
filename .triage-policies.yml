@@ -32,19 +32,15 @@ resource_rules:
         conditions:
           state: opened
           forbidden_labels:
-            - "workflow::validation backlog"
-            - "workflow::problem validation"
-            - "workflow::solution validation"
-            - "workflow::planning breakdown"
-            - "workflow::refinement"
-            - "workflow::scheduling"
-            - "workflow::ready for development"
-            - "workflow::in dev"
+            - "workflow::discovery backlog"
+            - "workflow::breakdown"
+            - "workflow::estimation"
+            - "workflow::ready"
+            - "workflow::in progress"
             - "workflow::in review"
             - "workflow::verification"
             - "workflow::blocked"
             - "workflow::on ice❄"
-
         actions:
           labels:
             - "workflow::unknown-missing"
