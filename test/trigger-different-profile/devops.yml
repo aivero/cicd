@@ -1,0 +1,4 @@
+- profiles:
+  - linux-x86_64
+  trigger: triggered-from-different-profile
+  script: echo
