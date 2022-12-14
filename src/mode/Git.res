@@ -27,6 +27,7 @@ let getParentBranch = () => {
   (curBranch, Proc.run(["git", "branch", "-a"]))
   ->Task.seq2
   ->Task.flatMap(((curBranch, output)) => {
+    Console.log(`output: ${output}`)
     let branches =
       output
       ->String.trim
