@@ -28,6 +28,16 @@ let git_strat_none = (
   },
 )
 
+let empty_conan_upload = (
+  "conan-upload",
+  {
+    ...Jobt.default,
+    script: Some(["echo"]),
+    tags: Some(["x86_64"]),
+    extends: Some([".git-strat-none"]),
+  },
+)
+
 let extends = [
   git_strat_none,
   (
@@ -494,7 +504,7 @@ let getJobs = (ints: array<Instance.t>) => {
   )
   ->Task.flatMap(ints =>
     ints->Array.empty
-      ? [git_strat_none]->Task.to
+      ? [git_strat_none, empty_conan_upload]->Task.to
       : ints
         ->getBuildOrder
         ->Task.map(buildOrder => ints->getJob(buildOrder))
