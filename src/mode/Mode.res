@@ -44,7 +44,7 @@ let addReqs = (ints, allInts) => {
         ->Array.map(trigger => `${trigger.name}/${trigger.version}`)
       {
         ...triggered,
-        needs: triggered.needs->Array.concat(triggers),
+        needs: triggered.needs->Array.concat(triggers)->Array.uniq,
       }
     })
     ->Task.to

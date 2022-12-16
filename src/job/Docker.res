@@ -193,7 +193,7 @@ let getJob = (
           image: image,
           services: Some(["docker:20-dind"]),
           tags: tags,
-          needs: Some(needs->Array.concat(["conan-upload"])),
+          needs: Some(needs->Array.concat(["conan-upload"])->Array.uniq),
           variables: Some(
             Dict.fromArray([
               ("DOCKER_TLS_CERTDIR", "/certs"),

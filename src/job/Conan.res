@@ -310,7 +310,7 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
         ...Jobt.default,
         script: Some(["echo"]),
         tags: Some(["x86_64"]),
-        needs: Some(groupJobNeeds),
+        needs: Some(groupJobNeeds->Array.uniq),
       },
     )
 
@@ -427,7 +427,7 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
               | [need, _] => need
               | _ => "invalid-need"
               }
-            ),
+            )->Array.uniq,
           )
         | None => Some([])
         },
