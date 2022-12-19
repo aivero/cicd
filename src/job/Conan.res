@@ -75,7 +75,7 @@ let extends = [
       }),
       retry: Some({
         max: Some(2),
-        \"when": Some(["runner_system_failure", "stuck_or_timeout_failure"]),
+        \"when": Some(["script_failure", "runner_system_failure", "stuck_or_timeout_failure"]),
       }),
       artifacts: Some({
         expire_in: Some("1 month"),
