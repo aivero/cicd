@@ -20,11 +20,7 @@ let git_strat_none = (
   ".git-strat-none",
   {
     ...Jobt.default,
-    variables: Some(
-      [
-        ("GIT_STRATEGY", "none"),
-      ]->Dict.fromArray,
-    ),
+    variables: Some([("GIT_STRATEGY", "none")]->Dict.fromArray),
   },
 )
 
@@ -360,7 +356,9 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
               [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.beforeScript),
             ),
             after_script: Some(
-              [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
+              [`cd $CI_PROJECT_DIR/${int.base.folder}`, `conan remove --locks`]->Array.concat(
+                int.base.afterScript,
+              ),
             ),
             needs: Some(base.needs->Array.concat(groupJobNeededInOutPut)->Array.uniq),
           },
@@ -424,12 +422,14 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
         needs: switch buildOrder[buildOrder->Array.length - 1] {
         | Some(needs) =>
           Some(
-            needs->Array.map(need =>
+            needs
+            ->Array.map(need =>
               switch need->String.split("@#") {
               | [need, _] => need
               | _ => "invalid-need"
               }
-            )->Array.uniq,
+            )
+            ->Array.uniq,
           )
         | None => Some([])
         },
