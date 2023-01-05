@@ -36,6 +36,7 @@ type t = {
   cache: option<Jobt.cache>,
   manual: option<bool>,
   rules: option<array<Jobt.rule>>,
+  interruptible: bool,
 }
 
 let parseMode = str => {
@@ -242,5 +243,6 @@ let create = (int: Yaml.t, folderPath): t => {
     cache: cache,
     manual: manual,
     rules: rules,
+    interruptible: true,
   }
 }
