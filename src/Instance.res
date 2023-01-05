@@ -243,6 +243,6 @@ let create = (int: Yaml.t, folderPath): t => {
     cache: cache,
     manual: manual,
     rules: rules,
-    interruptible: true,
+    interruptible: false,
   }
 }

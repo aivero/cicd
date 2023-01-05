@@ -54,5 +54,5 @@ let default = {
   \"when": None,
   allow_failure: None,
   rules: None,
-  interruptible: true,
+  interruptible: false,
 }
