@@ -35,6 +35,7 @@ type t = {
   \"when": option<string>,
   allow_failure: option<bool>,
   rules: option<array<rule>>,
+  interruptible: bool,
 }
 
 let default = {
@@ -52,5 +53,6 @@ let default = {
   artifacts: None,
   \"when": None,
   allow_failure: None,
-  rules: None
+  rules: None,
+  interruptible: true,
 }
