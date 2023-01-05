@@ -69,10 +69,6 @@ let extends = [
         "conan upload $NAME/$VERSION@ --all -c -r $REPO",
         "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
       ]),
-      cache: Some({
-        key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
-        paths: ["$CARGO_HOME", "$SCCACHE_DIR"],
-      }),
       retry: Some({
         max: Some(2),
         \"when": Some(["script_failure", "runner_system_failure", "stuck_or_timeout_failure"]),
