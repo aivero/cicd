@@ -273,42 +273,7 @@ let getExtends = ((profile, bootstrap)) => {
 let getJob = (allInts: array<conanInstance>, buildOrder) => {
   buildOrder
   ->Array.flatMapWithIndex((index, group) => {
-    let groupJobName = `group-job-${index->Int.toString}`
-    let groupJobNeeds = switch buildOrder[index - 1] {
-    | Some(group) =>
-      group->Array.flatMap(pkg => {
-        switch pkg->String.split("@#") {
-        | [pkg, _] =>
-          allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg) ? [pkg] : []
-        | _ => []
-        }
-      })
-    | None => []
-    }->Array.uniq
-
-    let groupJob = (
-      groupJobName,
-      {
-        ...Jobt.default,
-        script: Some(["echo"]),
-        tags: Some(["x86_64"]),
-        needs: Some(groupJobNeeds->Array.uniq),
-      },
-    )
-
-    // Only add group job to output if it actually has any needs. If it does not, then it doesn't
-    // do anything and we are just waisting time trying to run it.
-    let groupJobInOutPut = switch groupJobNeeds->Array.length {
-    | 0 => []
-    | _ => [groupJob]
-    }
-    let groupJobNeededInOutPut = switch groupJobNeeds->Array.length {
-    | 0 => []
-    | _ => [groupJobName]
-    }
-
-    group
-    ->Array.flatMap(pkg => {
+    group->Array.flatMap(pkg => {
       let (pkg, pkgRevision) = switch pkg->String.split("@#") {
       | [pkg, pkgRevision] => (pkg, pkgRevision)
       | _ => ("invalid-pkg", "invalid-rev")
@@ -342,12 +307,29 @@ let getJob = (allInts: array<conanInstance>, buildOrder) => {
             after_script: Some(
               [`cd $CI_PROJECT_DIR/${int.base.folder}`]->Array.concat(int.base.afterScript),
             ),
-            needs: Some(base.needs->Array.concat(groupJobNeededInOutPut)->Array.uniq),
+            needs: Some(
+              base.needs
+              ->Array.concat(
+                switch buildOrder[index - 1] {
+                | Some(group) =>
+                  group->Array.flatMap(pkg => {
+                    switch pkg->String.split("@#") {
+                    | [pkg, _] =>
+                      allInts->Array.some(({base}) => `${base.name}/${base.version}` == pkg)
+                        ? [pkg]
+                        : []
+                    | _ => []
+                    }
+                  })
+                | None => []
+                },
+              )
+              ->Array.uniq,
+            ),
           },
         )
       })
     })
-    ->Array.concat(groupJobInOutPut)
   })
   ->Array.concat([
     (
