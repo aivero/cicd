@@ -46,12 +46,7 @@ let extends = [
       ...Jobt.default,
       variables: Some(
         [
-          ("CONAN_USER_HOME", "$CI_PROJECT_DIR"),
-          ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/conan_data"),
           ("GIT_SUBMODULE_STRATEGY", "recursive"),
-          ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo"),
-          ("SCCACHE_DIR", "$CI_PROJECT_DIR/.sccache"),
-          ("GIT_CLEAN_FLAGS", "-x -f -e $CARGO_HOME/** -e $SCCACHE_DIR/**"),
         ]->Dict.fromArray,
       ),
       script: Some([
@@ -72,17 +67,6 @@ let extends = [
       retry: Some({
         max: Some(2),
         \"when": Some(["script_failure", "runner_system_failure", "stuck_or_timeout_failure"]),
-      }),
-      artifacts: Some({
-        expire_in: Some("1 month"),
-        \"when": Some("always"),
-        paths: Some([
-          "conan_data/$NAME/$VERSION/_/_/build/*/meson-logs/*-log.txt",
-          "conan_data/$NAME/$VERSION/_/_/build/*/*/meson-logs/*-log.txt",
-          "conan_data/$NAME/$VERSION/_/_/build/*/CMakeFiles/CMake*.log",
-          "conan_data/$NAME/$VERSION/_/_/build/*/*/CMakeFiles/CMake*.log",
-          "conan_data/$NAME/$VERSION/_/_/build/*/*/config.log",
-        ]),
       }),
     },
   ),
