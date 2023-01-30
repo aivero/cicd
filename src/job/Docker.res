@@ -15,6 +15,7 @@ type dockerInstance = {
   afterScript: array<string>,
   \"when": option<string>,
   allow_failure: option<bool>,
+  variables: Dict.t<string>,
 }
 
 let getInstances = (
@@ -31,6 +32,7 @@ let getInstances = (
     script,
     afterScript,
     manual,
+    variables,
   }: Instance.t,
 ): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
@@ -68,6 +70,7 @@ let getInstances = (
           afterScript: afterScript,
           \"when": \"when",
           allow_failure: allow_failure,
+          variables: variables,
         },
       ]
     | None =>
@@ -92,6 +95,7 @@ let getInstances = (
         afterScript: afterScript,
         \"when": \"when",
         allow_failure: allow_failure,
+        variables: variables,
       })
     }
   )
@@ -113,6 +117,7 @@ let getJob = (
     afterScript,
     \"when",
     allow_failure,
+    variables,
   }: dockerInstance,
 ) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
@@ -198,7 +203,7 @@ let getJob = (
             Dict.fromArray([
               ("DOCKER_TLS_CERTDIR", "/certs"),
               ("GIT_SUBMODULE_STRATEGY", "recursive"),
-            ]),
+            ])->Dict.concat(variables),
           ),
           \"when": \"when",
           allow_failure: allow_failure,

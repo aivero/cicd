@@ -36,6 +36,7 @@ type t = {
   cache: option<Jobt.cache>,
   manual: option<bool>,
   rules: option<array<Jobt.rule>>,
+  variables: Dict.t<string>,
   interruptible: bool,
 }
 
@@ -223,6 +224,17 @@ let create = (int: Yaml.t, folderPath): t => {
     }
   | _ => None
   }
+  let variables = switch int->Yaml.get("variables") {
+  | Yaml.Object(sets) =>
+    sets->Dict.map(((key, val)) =>
+      switch (key, val) {
+      | (key, Yaml.String(val)) => (key, val)
+      | _ => (key, "False")
+      }
+    )
+  | _ => Dict.empty()
+  }
+
   {
     name: name,
     version: version,
@@ -243,6 +255,7 @@ let create = (int: Yaml.t, folderPath): t => {
     cache: cache,
     manual: manual,
     rules: rules,
+    variables: variables,
     interruptible: false,
   }
 }
