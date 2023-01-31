@@ -134,6 +134,21 @@ let getJob = (
     | Some("master") => true
     | _ => false
     }
+    let dockerService = switch Env.get("DOCKER_CA_CERTIFICATE_KEY") {
+    | Some(_) =>
+      Some([
+        {
+          name: "docker:20-dind",
+          variables: Some(Dict.fromArray([("DOCKER_CA_CERTIFICATE_KEY", "$DOCKER_CA_CERTIFICATE_KEY")])),
+          command: Some([
+            "/bin/sh",
+            "-c",
+            "mkdir -p /usr/local/share/ca-certificates && echo $DOCKER_CA_CERTIFICATE_KEY > /usr/local/share/ca-certificates/my-ca.crt && update-ca-certificates && dockerd-entrypoint.sh",
+          ]),
+        },
+      ])
+    | _ => Some([{name: "docker:20-dind", variables: None, command: None}])
+    }
     let image = switch image {
     | Some(image) => {
         Console.log("Docker Mode: Image is set, using it as docker image")
@@ -196,7 +211,7 @@ let getJob = (
           script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(script)),
           after_script: Some([`cd $CI_PROJECT_DIR/${folder}`]->Array.concat(afterScript)),
           image: image,
-          services: Some(["docker:20-dind"]),
+          services: dockerService,
           tags: tags,
           needs: Some(needs->Array.concat(["conan-upload"])->Array.uniq),
           variables: Some(

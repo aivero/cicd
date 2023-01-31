@@ -18,6 +18,7 @@ type rule = {
   \"if": option<string>,
   \"when": option<string>,
 }
+type services = {command: option<array<string>>, name: string, variables: option<Dict.t<string>>}
 
 type t = {
   extends: option<array<string>>,
@@ -28,7 +29,7 @@ type t = {
   script: option<array<string>>,
   after_script: option<array<string>>,
   needs: option<array<string>>,
-  services: option<array<string>>,
+  services: option<array<services>>,
   cache: option<cache>,
   retry: option<retry>,
   artifacts: option<artifacts>,
