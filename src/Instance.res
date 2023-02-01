@@ -225,13 +225,12 @@ let create = (int: Yaml.t, folderPath): t => {
   | _ => None
   }
   let variables = switch int->Yaml.get("variables") {
-  | Yaml.Object(sets) =>
-    sets->Dict.map(((key, val)) =>
+  | Yaml.Object(sets) => sets->Dict.toArray->Array.reduce((elems, (key, val)) =>
       switch (key, val) {
-      | (key, Yaml.String(val)) => (key, val)
-      | _ => (key, "False")
+      | (key, Yaml.String(val)) => elems->Array.concat([(key, val)])
+      | _ => elems
       }
-    )
+    , [])->Dict.fromArray
   | _ => Dict.empty()
   }
 
