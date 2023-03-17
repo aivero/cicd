@@ -16,6 +16,7 @@ type dockerInstance = {
   \"when": option<string>,
   allow_failure: option<bool>,
   variables: Dict.t<string>,
+  rules: option<array<Jobt.rule>>,
 }
 
 let getInstances = (
@@ -33,6 +34,7 @@ let getInstances = (
     afterScript,
     manual,
     variables,
+    rules,
   }: Instance.t,
 ): array<dockerInstance> => {
   let file = switch modeInt->Yaml.get("file") {
@@ -71,6 +73,7 @@ let getInstances = (
           \"when": \"when",
           allow_failure: allow_failure,
           variables: variables,
+          rules: rules,
         },
       ]
     | None =>
@@ -96,6 +99,7 @@ let getInstances = (
         \"when": \"when",
         allow_failure: allow_failure,
         variables: variables,
+        rules: rules,
       })
     }
   )
@@ -118,6 +122,7 @@ let getJob = (
     \"when",
     allow_failure,
     variables,
+    rules,
   }: dockerInstance,
 ) => {
   `Found docker instance: ${name}/${version} (${profile})`->Console.log
@@ -207,6 +212,7 @@ let getJob = (
           ),
           \"when": \"when",
           allow_failure: allow_failure,
+          rules: rules,
         },
       )
     })
