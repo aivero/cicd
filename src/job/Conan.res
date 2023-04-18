@@ -48,10 +48,13 @@ let extends = [
         [
           ("GIT_SUBMODULE_STRATEGY", "recursive"),
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo_home"),
+          ("CARGO_TARGET_DIR", "$CI_PROJECT_DIR/.cargo_target"),
+          ("CONAN_USER_HOME", "$CI_PROJECT_DIR/.conan_home"),
+          ("CONAN_DATA_PATH", "$CI_PROJECT_DIR/.conan_data"),
         ]->Dict.fromArray,
       ),
       script: Some([
-        "conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
+        "time conan config install $CONAN_CONFIG_URL -sf $CONAN_CONFIG_DIR",
         "conan config set general.default_profile=$PROFILE",
         "conan config set storage.path=$CONAN_DATA_PATH",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_ALL",
@@ -60,14 +63,14 @@ let extends = [
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_ALL",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_INTERNAL",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $CONAN_REPO_DEV_PUBLIC",
-        "conan create -u . $NAME/$VERSION@ $ARGS",
+        "time conan create -u . $NAME/$VERSION@ $ARGS",
         "conan user $CONAN_LOGIN_USERNAME -p $CONAN_LOGIN_PASSWORD -r $REPO",
         "conan upload $NAME/$VERSION@ --all -c -r $REPO",
         "[[ -n $UPLOAD_ALIAS ]] && conan upload $NAME/$CI_COMMIT_REF_NAME@ --all -c -r $REPO || echo",
       ]),
       cache: Some({
         key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
-        paths: ["$CARGO_HOME"],
+        paths: ["$CARGO_HOME", "$CARGO_TARGET_DIR"],
       }),
       retry: Some({
         max: Some(2),
