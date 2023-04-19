@@ -46,6 +46,8 @@ let extends = [
       ...Jobt.default,
       variables: Some(
         [
+          ("FF_USE_FASTZIP", "true"),
+          ("CACHE_COMPRESSION_LEVEL", "fastest"),
           ("GIT_SUBMODULE_STRATEGY", "recursive"),
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo_home"),
           ("CARGO_TARGET_DIR", "$CI_PROJECT_DIR/.cargo_target"),
@@ -70,7 +72,10 @@ let extends = [
       ]),
       cache: Some({
         key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
-        paths: ["$CARGO_HOME", "$CARGO_TARGET_DIR"],
+        paths: [
+          "$CARGO_HOME",
+          "$CARGO_TARGET_DIR",
+        ],
       }),
       retry: Some({
         max: Some(2),
