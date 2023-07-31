@@ -11,7 +11,7 @@
     "rescript": "^9.1.4"
   },
   "dependencies": {
-    "@aivero/std": "^0.0.12",
+    "@aivero/std": "^0.0.11",
     "yarn": "^1.22.19"
   }
 }
