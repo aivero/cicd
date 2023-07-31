@@ -6,7 +6,7 @@
     "subdirs": true
   },
   "package-specs": "es6",
-  "bs-dependencies": ["@prefix_re/std"],
+  "bs-dependencies": ["@aivero/std"],
   "bsc-flags": [
     "-open Std"
    ]
