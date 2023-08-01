@@ -19,7 +19,7 @@ let generate = jobs => {
             {
               ...Jobt.default,
               script: Some(["echo"]),
-              tags: Some(["x86_64", "saas-linux-large-amd64"]),
+              tags: Some(["saas-linux-large-amd64"]),
             },
           ),
         ]
