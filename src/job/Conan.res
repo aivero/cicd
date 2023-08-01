@@ -33,7 +33,7 @@ let empty_conan_upload = (
   {
     ...Jobt.default,
     script: Some(["echo"]),
-    tags: Some(["x86_64", "saas-linux-small-amd64"]),
+    tags: Some(["saas-linux-small-amd64"]),
     extends: Some([".git-strat-none"]),
   },
 )
