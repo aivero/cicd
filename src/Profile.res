@@ -47,7 +47,7 @@ let getPlatform = profile => {
 let getTags = profile => {
   let triple = profile->String.split("-")->List.fromArray
   let arch = switch triple {
-  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok(["x86_64", "saas-linux-large-amd64"])
+  | list{_, "x86_64", ..._} | list{_, "wasm", ..._} => Ok(["saas-linux-large-amd64"])
   | list{_, "armv8", ..._} => Ok(["armv8"])
   | _ => Error(`profile: arch in ${profile} not supported`)
   }
