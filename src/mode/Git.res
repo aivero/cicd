@@ -2,57 +2,27 @@ let getCurBranch = () => {
   Env.getError("CI_COMMIT_REF_NAME")
 }
 
-let getMergeBase = (curBranch, branch) => {
-  Proc.run(["git", "merge-base", curBranch, branch])
-  ->Task.map(String.trim)
-  ->Task.flatMap(mergeBase =>
-    Proc.run(["git", "rev-list", "--count", `${curBranch}...${mergeBase}`])
-    ->Task.flatMap(output =>
-      output
-      ->String.trim
-      ->Int.fromString
-      ->Option.toResult("Couldn't convert to int")
-      ->Task.fromResult
-    )
-    ->Task.map(countMergeBase => (countMergeBase, branch, mergeBase))
-  )
-  ->Task.fold(output => {
-    Console.log(`Branch "${branch}" failed with output: \n${output}`)
-    (99999, "00000000000", branch)
-  })
+let getDefaultBranch = () => {
+  Env.getError("CI_DEFAULT_BRANCH")
 }
 
-let getParentBranch = () => {
-  let curBranch = getCurBranch()->Task.fromResult
-  (curBranch, Proc.run(["git", "branch", "-a"]))
-  ->Task.seq2
-  ->Task.flatMap(((curBranch, output)) => {
-    Console.log(`output: ${output}`)
-    let branches =
-      output
-      ->String.trim
-      ->String.split("\n")
-      ->Array.map(String.trim)
-      ->Array.filter(branch =>
-        !(branch->String.startsWith("*") || branch->String.endsWith(`/${curBranch}`))
-      )
-    branches
-    ->Array.map(getMergeBase(curBranch))
-    ->Task.seq
-    ->Task.flatMap(mergeBases =>
-      Array.sort(mergeBases, ((a, _, _), (b, _, _)) => a - b)[0]
-      ->Option.toResult("No merge bases")
-      ->Task.fromResult
-    )
-  })
-  ->Task.map(((_, branch, commit)) => (branch, commit))
-}
+let getParentBranch = () =>
+  switch (Env.getError("CI_TARGET_BRANCH_NAME"), getDefaultBranch()) {
+  | (Ok(""), Ok(branch)) => branch
+  | (Ok(branch), _) => branch
+  | (_, Ok("")) => "master"
+  | (_, Ok(branch)) => branch
+  | _ => "master"
+  }
 
 let getLastRev = () =>
   switch (getCurBranch(), Env.getError("CI_COMMIT_BEFORE_SHA")) {
   | (Ok("master"), Ok("0000000000000000000000000000000000000000")) => ("master", "HEAD^")->Task.to
   | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
-  | (Ok(_), _) => getParentBranch()->Task.map(((ref, commit)) => (ref, commit))
+  | (Ok(_), _) => {
+    let parent_branch = getParentBranch()
+    (parent_branch, parent_branch)->Task.to
+  }
   | _ => "Couldn't find last rev"->Task.toError
   }
 
