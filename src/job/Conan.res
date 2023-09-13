@@ -47,7 +47,7 @@ let extends = [
       variables: Some(
         [
           ("FF_USE_FASTZIP", "true"),
-          ("CACHE_COMPRESSION_LEVEL", "fastest"),
+          ("CACHE_COMPRESSION_LEVEL", "fast"),
           ("GIT_SUBMODULE_STRATEGY", "recursive"),
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo_home"),
           ("CARGO_TARGET_DIR", "$CI_PROJECT_DIR/.cargo_target"),
