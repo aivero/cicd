@@ -76,7 +76,7 @@ let extends = [
         paths: [
           "$CARGO_HOME",
           "$CARGO_TARGET_DIR",
-          "$CONAN_DATA_PATH",
+          // "$CONAN_DATA_PATH",
         ],
       }),
       retry: Some({
