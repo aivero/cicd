@@ -6,6 +6,11 @@ let getDefaultBranch = () => {
   Env.getError("CI_DEFAULT_BRANCH")
 }
 
+let getMergeBase = (curBranch, branch) => {
+  Proc.run(["git", "merge-base", curBranch, branch])
+  ->Task.map(String.trim)
+}
+
 let getParentBranch = () =>
   switch (Env.getError("CI_TARGET_BRANCH_NAME"), getDefaultBranch()) {
   | (Ok(""), Ok(branch)) => branch
@@ -19,9 +24,9 @@ let getLastRev = () =>
   switch (getCurBranch(), Env.getError("CI_COMMIT_BEFORE_SHA")) {
   | (Ok("master"), Ok("0000000000000000000000000000000000000000")) => ("master", "HEAD^")->Task.to
   | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
-  | (Ok(_), _) => {
-    let parent_branch = getParentBranch()
-    (parent_branch, parent_branch)->Task.to
+  | (Ok(curBranch), _) => {
+    let parentBranch = getParentBranch()
+    getMergeBase(curBranch, parentBranch)->Task.map((ref) => (parentBranch, ref))
   }
   | _ => "Couldn't find last rev"->Task.toError
   }
