@@ -26,7 +26,7 @@ let getLastRev = () =>
   | (Ok("master"), Ok(commit)) => ("master", commit)->Task.to
   | (Ok(curBranch), _) => {
     let parentBranch = getParentBranch()
-    getMergeBase(curBranch, parentBranch)->Task.map((ref) => (parentBranch, ref))
+    getMergeBase(curBranch, `remotes/origin/${parentBranch}`)->Task.map((ref) => (parentBranch, ref))
   }
   | _ => "Couldn't find last rev"->Task.toError
   }
