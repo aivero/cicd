@@ -55,6 +55,18 @@ let load = () => {
   let kind = Env.get("mode")
   let component = Env.get("component")
   let recursive = Env.get("recursive")
+  switch kind {
+  | Some(kind) => `kind: ${kind}`->Console.log
+  | _ => ()
+  }
+  switch component {
+  | Some(component) => `component: ${component}`->Console.log
+  | _ => ()
+  }
+  switch recursive {
+  | Some(recursive) => `recursive: ${recursive}`->Console.log
+  | _ => ()
+  }
 
   let recursive = switch recursive {
   | Some("true") | Some("1") => true
