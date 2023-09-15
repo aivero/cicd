@@ -213,6 +213,10 @@ let getJob = (
           \"when": \"when",
           allow_failure: allow_failure,
           rules: rules,
+          retry: Some({
+            max: Some(2),
+            \"when": Some(["script_failure", "runner_system_failure", "stuck_or_timeout_failure"]),
+          }),
         },
       )
     })
