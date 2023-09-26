@@ -49,6 +49,7 @@ let extends = [
           ("FF_USE_FASTZIP", "true"),
           ("CACHE_COMPRESSION_LEVEL", "fastest"),
           ("GIT_SUBMODULE_STRATEGY", "recursive"),
+          ("CARGO_INCREMENTAL", "0"),
           ("CARGO_HOME", "$CI_PROJECT_DIR/.cargo_home"),
           ("CARGO_TARGET_DIR", "$CI_PROJECT_DIR/.cargo_target"),
           ("CONAN_USER_HOME", "$CI_PROJECT_DIR/.conan_home"),
@@ -75,13 +76,17 @@ let extends = [
         paths: [
           // Cache only parts of CARGO_HOME:
           // https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
-          "$CARGO_HOME/.crates.toml",
-          "$CARGO_HOME/.crates2.json",
           "$CARGO_HOME/bin/",
-          "$CARGO_HOME/registry/index/",
-          "$CARGO_HOME/registry/cache/",
+          "$CARGO_HOME/.crates2.json",
+          "$CARGO_HOME/.crates.toml",
           "$CARGO_HOME/git/db/",
-          "$CARGO_TARGET_DIR",
+          "$CARGO_HOME/registry/cache/",
+          "$CARGO_HOME/registry/index/",
+          // Cache only parts of CARGO_TARGET_DIR
+          // https://github.com/Swatinem/rust-cache/blob/a95ba195448af2da9b00fb742d14ffaaf3c21f43/src/cleanup.ts#L57
+          "$CARGO_TARGET_DIR/release/build/",
+          "$CARGO_TARGET_DIR/release/deps/",
+          "$CARGO_TARGET_DIR/release/.fingerprint/",
         ],
       }),
       retry: Some({
