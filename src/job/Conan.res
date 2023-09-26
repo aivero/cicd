@@ -73,7 +73,14 @@ let extends = [
       cache: Some({
         key: Some("$CI_RUNNER_EXECUTABLE_ARCH"),
         paths: [
-          "$CARGO_HOME",
+          // Cache only parts of CARGO_HOME:
+          // https://doc.rust-lang.org/nightly/cargo/guide/cargo-home.html#caching-the-cargo-home-in-ci
+          "$CARGO_HOME/.crates.toml",
+          "$CARGO_HOME/.crates2.json",
+          "$CARGO_HOME/bin/",
+          "$CARGO_HOME/registry/index/",
+          "$CARGO_HOME/registry/cache/",
+          "$CARGO_HOME/git/db/",
           "$CARGO_TARGET_DIR",
         ],
       }),
